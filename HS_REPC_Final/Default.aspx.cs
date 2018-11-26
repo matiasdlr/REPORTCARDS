@@ -249,7 +249,7 @@ namespace HS_REPC_Final
                         sql = " WITH MQUERY AS(SELECT IDENTIFIER, STDID, STDDESC, STCOURSE, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL,";
                         sql += " SUBJECTAREA, SG.STORECODE, SG.STANDARDGRADE, T.LASTFIRST TEACHER";
                         sql += " FROM ES_VISTA";
-                        sql += " LEFT JOIN STANDARDGRADESECTION SG ON STDCID = SG.STUDENTSDCID AND STDID = SG.STANDARDID AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1', 'T2', 'T3') AND SG.STANDARDGRADE<>'--'";
+                        sql += " LEFT JOIN STANDARDGRADESECTION SG ON STDCID = SG.STUDENTSDCID AND STDID = SG.STANDARDID AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1') AND SG.STANDARDGRADE<>'--'";
                         sql += " LEFT JOIN CC CO ON STID = CO.STUDENTID AND STCOURSE = CO.COURSE_NUMBER  AND CO.ORIGSECTIONID = 0";
                         sql += " LEFT JOIN TEACHERS T ON CO.TEACHERID = T.ID)";
                         sql += " SELECT DISTINCT IDENTIFIER,STID,STUDENT_NUMBER,STUDENT,GRADE_LEVEL,GRADE_LEVEL,TEACHER,STCOURSE,SUBJECTAREA,STDDESC";
@@ -358,21 +358,83 @@ namespace HS_REPC_Final
                         }
 
 
-                        //sql += " CREATE OR REPLACE VIEW ES_VISTA_ESP";
-                        //sql += " AS WITH X AS(";
-                        //sql += " SELECT IDENTIFIER, STDID, STDDESC, stcourse, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA FROM(";
-                        //sql += " SELECT ST.STANDARDID STDID, ST.IDENTIFIER, TO_CHAR(TRANSIENTCOURSELIST) stcourse, ST.SUBJECTAREA, ST.NAME STDDESC FROM STANDARD ST";
+                        sql = " CREATE OR REPLACE VIEW ES_VISTA_ESP";
+                        sql += " AS WITH X AS(";
+                        sql += " SELECT IDENTIFIER, STDID, STDDESC, stcourse, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA FROM(";
+                        sql += " SELECT ST.STANDARDID STDID, ST.IDENTIFIER, TO_CHAR(TRANSIENTCOURSELIST) stcourse, ST.SUBJECTAREA, ST.NAME STDDESC FROM STANDARD ST";
+                        if (grade == "2")
+                        {
+                            sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "TECH', '" + grade + "Art', '" + grade + "Mus')";
+                        }
+                        else
+                        {
+                            sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "TECH', '" + grade + "ART', '" + grade + "MUS')";
+                        }
+                                sql += " AND ST.YEARID = 28 AND ST.STANDARDID NOT IN(17299, 17293, 17923)AND isassignmentallowed = 1 AND ISACTIVE = 1)";
+                                sql += " CROSS JOIN";
+                                sql += " (";
+                                sql += " SELECT FIRST_NAME || ' ' || LAST_NAME STUDENT, STUDENT_NUMBER, STUDENTS.DCID AS STDCID, ID AS STID, GRADE_LEVEL FROM STUDENTS";
+                                if (grade == "K")
+                                {
+                                    sql += " WHERE GRADE_LEVEL=0 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnumb[h] + ")";
+                                }
+                                else if (grade == "PK")
+                                {
+                                    sql += " WHERE GRADE_LEVEL=-1 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnumb[h] + ")";
+                                }
+                                else
+                                {
+                                    sql += " WHERE GRADE_LEVEL='" + grade + "' AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnumb[h] + ")";
+                                }
+                                sql += " )";
+                                sql += " SELECT IDENTIFIER, STDID, STDDESC, STCOURSE, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA FROM X";
+
+                                OracleCommand cmdV2 = new OracleCommand(sql, con);
+                                cmdV2.ExecuteNonQuery();
+
+                                sql = " SELECT TEACHER, STCOURSE, LISTAGG(T1,',') WITHIN GROUP (ORDER BY STDDESC) T1,LISTAGG(T2, ',') WITHIN GROUP (ORDER BY STDDESC)T2,LISTAGG(T3, ',') WITHIN GROUP (ORDER BY STDDESC)T3 FROM (";
+                                sql += " WITH MQUERY AS(SELECT IDENTIFIER, STDID, STDDESC, STCOURSE, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL,";
+                                sql += " SUBJECTAREA, SG.STORECODE, SG.STANDARDGRADE, T.LASTFIRST TEACHER";
+                                sql += " FROM ES_VISTA_ESP";
+                                sql += " LEFT JOIN STANDARDGRADESECTION SG ON STDCID = SG.STUDENTSDCID AND sg.yearid = 28 and STDID = SG.STANDARDID AND STANDARDGRADE <> '--'";
+                                sql += "  AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1')";
+                                sql += " LEFT JOIN CC CO ON STID = CO.STUDENTID AND STCOURSE = CO.COURSE_NUMBER  AND CO.ORIGSECTIONID = 0";
+                                sql += " LEFT JOIN TEACHERS T ON CO.TEACHERID = T.ID)";
+                                sql += " SELECT DISTINCT TEACHER, STCOURSE, STDDESC";
+                                sql += " , (SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T1') T1";
+                                sql += " ,(SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T2') T2";
+                                sql += " ,(SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T3') T3";
+                                sql += " FROM MQUERY M";
+                                sql += " )";
+                                sql += " GROUP BY TEACHER,STCOURSE";
+                                sql += " ORDER BY CASE";
+                                sql += " WHEN STCOURSE LIKE '%" + grade + "TECH%' THEN 1";
+                                if (grade == "2")
+                                {
+                                    sql += " WHEN STCOURSE LIKE '%" + grade + "Art%' THEN 2";
+                                    sql += " WHEN STCOURSE LIKE '%" + grade + "Mus%' THEN 3";
+                                }
+                                else
+                                {
+                                    sql += " WHEN STCOURSE LIKE '%" + grade + "ART%' THEN 2";
+                                    sql += " WHEN STCOURSE LIKE '%" + grade + "MUS%' THEN 3";
+                                }
+                                sql += " END";
+
+                        //        sql = "WITH X AS(";
+                        //sql += " SELECT IDENTIFIER, STANDARDID, STDDESC, stcourse, LASTFIRST, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA FROM(";
+                        //sql += " SELECT ST.STANDARDID, ST.IDENTIFIER, TO_CHAR(TRANSIENTCOURSELIST) stcourse, ST.SUBJECTAREA, ST.NAME STDDESC FROM STANDARD ST";
                         //if (grade == "2")
                         //{
                         //    sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "TECH', '" + grade + "Art', '" + grade + "Mus')";
-                        //}
-                        //else { 
-                        //    sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "TECH', '" + grade + "ART', '" + grade + "MUS')";
+                        //}else
                         //{
-                        //sql += " AND ST.YEARID = 28 AND ST.STANDARDID NOT IN(17299, 17293, 17923)AND isassignmentallowed = 1 AND ISACTIVE = 1)";
+                        //    sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "TECH', '" + grade + "ART', '" + grade + "MUS')";
+                        //}
+                        //sql += " AND ST.YEARID = 28 AND STANDARDID NOT IN(17299, 17293)AND isassignmentallowed = 1)";
                         //sql += " CROSS JOIN";
                         //sql += " (";
-                        //sql += " SELECT FIRST_NAME || ' ' || LAST_NAME STUDENT, STUDENT_NUMBER, STUDENTS.DCID AS STDCID, ID AS STID, GRADE_LEVEL FROM STUDENTS";
+                        //sql += " SELECT LASTFIRST, STUDENT_NUMBER, STUDENTS.DCID AS STDCID, ID AS STID, GRADE_LEVEL FROM STUDENTS";
                         //if (grade == "K")
                         //{
                         //    sql += " WHERE GRADE_LEVEL=0 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnumb[h] + ")";
@@ -386,78 +448,17 @@ namespace HS_REPC_Final
                         //    sql += " WHERE GRADE_LEVEL='" + grade + "' AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnumb[h] + ")";
                         //}
                         //sql += " )";
-                        //sql += " SELECT IDENTIFIER, STDID, STDDESC, STCOURSE, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA FROM X;";
-
-                        //OracleCommand cmdV2 = new OracleCommand(sql, con);
-                        //cmdV2.ExecuteNonQuery();
-
-                        //sql += " SELECT TEACHER, STCOURSE, LISTAGG(T1,',') WITHIN GROUP (ORDER BY STDDESC) T1,LISTAGG(T2, ',') WITHIN GROUP (ORDER BY STDDESC)T2,LISTAGG(T3, ',') WITHIN GROUP (ORDER BY STDDESC)T3 FROM (";
-                        //sql += " WITH MQUERY AS(SELECT IDENTIFIER, STDID, STDDESC, STCOURSE, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL,";
-                        //sql += " SUBJECTAREA, SG.STORECODE, SG.STANDARDGRADE, T.LASTFIRST TEACHER";
-                        //sql += " FROM ES_VISTA_ESP";
-                        //sql += " LEFT JOIN STANDARDGRADESECTION SG ON STDCID = SG.STUDENTSDCID AND sg.yearid = 28 and STDID = SG.STANDARDID AND STANDARDGRADE <> '--'";
-                        //sql += "  AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1', 'T2', 'T3')";
-                        //sql += " LEFT JOIN CC CO ON STID = CO.STUDENTID AND STCOURSE = CO.COURSE_NUMBER  AND CO.ORIGSECTIONID = 0";
-                        //sql += " LEFT JOIN TEACHERS T ON CO.TEACHERID = T.ID)";
-                        //sql += " SELECT DISTINCT TEACHER, STCOURSE, STDDESC";
-                        //sql += " , (SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T1') T1";
-                        //sql += " ,(SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T2') T2";
-                        //sql += " ,(SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T3') T3";
-                        //sql += " FROM MQUERY M";
+                        //sql += " SELECT STUDENT, TEACHER, STCOURSE,(CASE WHEN STORECODE = 'T1' THEN T_GRADE || '/' || U_GRADE ELSE NULL END)T1";
+                        //sql += " ,(CASE WHEN STORECODE = 'T2' THEN T_GRADE|| '/' || U_GRADE ELSE NULL END)T2";
+                        //sql += " ,(CASE WHEN STORECODE = 'T3' THEN T_GRADE|| '/' || U_GRADE ELSE NULL END)T3";
+                        //sql += " FROM(SELECT X.STDDESC, X.STID, X.STUDENT_NUMBER, X.LASTFIRST STUDENT, T.LASTFIRST TEACHER, X.STCOURSE, SG.STANDARDGRADE, SG.STORECODE";
+                        //sql += " FROM X";
+                        //sql += " LEFT JOIN STANDARDGRADESECTION SG ON X.STDCID = SG.STUDENTSDCID AND X.STANDARDID = SG.STANDARDID AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1') AND SG.STANDARDGRADE<>'--'";
+                        //sql += " LEFT JOIN CC CO ON X.STID = CO.STUDENTID AND X.STCOURSE = CO.COURSE_NUMBER  AND CO.ORIGSECTIONID = 0";
+                        //sql += " LEFT JOIN TEACHERS T ON CO.TEACHERID = T.ID";
                         //sql += " )";
-                        //sql += " GROUP BY TEACHER,STCOURSE";
-                        //sql += " ORDER BY CASE";
-                        //sql += " WHEN STCOURSE LIKE '%" + grade + "TECH%' THEN 1";
-                        //if (grade == "2")
-                        //{
-                        //    sql += " WHEN STCOURSE LIKE '%" + grade + "Art%' THEN 2";
-                        //    sql += " WHEN STCOURSE LIKE '%" + grade + "Mus%' THEN 3";
-                        //}
-                        //else
-                        //{
-                        //    sql += " WHEN STCOURSE LIKE '%" + grade + "ART%' THEN 2";
-                        //    sql += " WHEN STCOURSE LIKE '%" + grade + "MUS%' THEN 3";
-                        //}
-                        //    sql += " END";
-
-                        sql = "WITH X AS(";
-                        sql += " SELECT IDENTIFIER, STANDARDID, STDDESC, stcourse, LASTFIRST, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA FROM(";
-                        sql += " SELECT ST.STANDARDID, ST.IDENTIFIER, TO_CHAR(TRANSIENTCOURSELIST) stcourse, ST.SUBJECTAREA, ST.NAME STDDESC FROM STANDARD ST";
-                        if (grade == "2")
-                        {
-                            sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "TECH', '" + grade + "Art', '" + grade + "Mus')";
-                        }else
-                        {
-                            sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "TECH', '" + grade + "ART', '" + grade + "MUS')";
-                        }
-                        sql += " AND ST.YEARID = 28 AND STANDARDID NOT IN(17299, 17293)AND isassignmentallowed = 1)";
-                        sql += " CROSS JOIN";
-                        sql += " (";
-                        sql += " SELECT LASTFIRST, STUDENT_NUMBER, STUDENTS.DCID AS STDCID, ID AS STID, GRADE_LEVEL FROM STUDENTS";
-                        if (grade == "K")
-                        {
-                            sql += " WHERE GRADE_LEVEL=0 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnumb[h] + ")";
-                        }
-                        else if (grade == "PK")
-                        {
-                            sql += " WHERE GRADE_LEVEL=-1 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnumb[h] + ")";
-                        }
-                        else
-                        {
-                            sql += " WHERE GRADE_LEVEL='" + grade + "' AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnumb[h] + ")";
-                        }
-                        sql += " )";
-                        sql += " SELECT STUDENT, TEACHER, STCOURSE,(CASE WHEN STORECODE = 'T1' THEN T_GRADE || '/' || U_GRADE ELSE NULL END)T1";
-                        sql += " ,(CASE WHEN STORECODE = 'T2' THEN T_GRADE|| '/' || U_GRADE ELSE NULL END)T2";
-                        sql += " ,(CASE WHEN STORECODE = 'T3' THEN T_GRADE|| '/' || U_GRADE ELSE NULL END)T3";
-                        sql += " FROM(SELECT X.STDDESC, X.STID, X.STUDENT_NUMBER, X.LASTFIRST STUDENT, T.LASTFIRST TEACHER, X.STCOURSE, SG.STANDARDGRADE, SG.STORECODE";
-                        sql += " FROM X";
-                        sql += " LEFT JOIN STANDARDGRADESECTION SG ON X.STDCID = SG.STUDENTSDCID AND X.STANDARDID = SG.STANDARDID AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1') AND SG.STANDARDGRADE<>'--'";
-                        sql += " LEFT JOIN CC CO ON X.STID = CO.STUDENTID AND X.STCOURSE = CO.COURSE_NUMBER  AND CO.ORIGSECTIONID = 0";
-                        sql += " LEFT JOIN TEACHERS T ON CO.TEACHERID = T.ID";
-                        sql += " )";
-                        sql += " PIVOT(MAX(standardgrade) AS grade FOR(STDDESC) IN('Understands concepts and uses skills.' AS U,'Follows Tribes® Agreements.' AS T))";
-                        sql += " ORDER BY STUDENT,STCOURSE DESC";
+                        //sql += " PIVOT(MAX(standardgrade) AS grade FOR(STDDESC) IN('Understands concepts and uses skills.' AS U,'Follows Tribes® Agreements.' AS T))";
+                        //sql += " ORDER BY STUDENT,STCOURSE DESC";
 
 
                         OracleCommand cmd2 = new OracleCommand(sql, con);
@@ -1066,7 +1067,7 @@ namespace HS_REPC_Final
                                         PdfPCell SPut1;
                                         if (esVal[2] != "")
                                         {
-                                            SPut1 = new PdfPCell(new Phrase(esVal[2].Split('/')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                            SPut1 = new PdfPCell(new Phrase(esVal[2].Split(',')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                         }
                                         else
                                         {
@@ -1079,7 +1080,7 @@ namespace HS_REPC_Final
                                         PdfPCell SPut2;
                                         if (esVal[2] != "")
                                         {
-                                            SPut2 = new PdfPCell(new Phrase(esVal[2].Split('/')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                            SPut2 = new PdfPCell(new Phrase(esVal[2].Split(',')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                         }
                                         else
                                         {
@@ -1092,7 +1093,7 @@ namespace HS_REPC_Final
                                         PdfPCell SPut3;
                                         if (esVal[3] != "")
                                         {
-                                            SPut3 = new PdfPCell(new Phrase(esVal[3].Split('/')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                            SPut3 = new PdfPCell(new Phrase(esVal[3].Split(',')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                         }
                                         else
                                         {
@@ -1105,7 +1106,7 @@ namespace HS_REPC_Final
                                         PdfPCell SPut4;
                                         if (esVal[3] != "")
                                         {
-                                            SPut4 = new PdfPCell(new Phrase(esVal[3].Split('/')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                            SPut4 = new PdfPCell(new Phrase(esVal[3].Split(',')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                         }
                                         else
                                         {
@@ -1119,7 +1120,7 @@ namespace HS_REPC_Final
                                         PdfPCell SPut5;
                                         if (esVal[4] != "")
                                         {
-                                            SPut5 = new PdfPCell(new Phrase(esVal[4].Split('/')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                            SPut5 = new PdfPCell(new Phrase(esVal[4].Split(',')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                         }
                                         else
                                         {
@@ -1132,7 +1133,7 @@ namespace HS_REPC_Final
                                         PdfPCell SPut6;
                                         if (esVal[4] != "")
                                         {
-                                            SPut6 = new PdfPCell(new Phrase(esVal[4].Split('/')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                            SPut6 = new PdfPCell(new Phrase(esVal[4].Split(',')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                         }
                                         else
                                         {
@@ -1572,7 +1573,7 @@ namespace HS_REPC_Final
                     sql = " WITH MQUERY AS(SELECT IDENTIFIER, STDID, STDDESC, STCOURSE, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL,";
                     sql += " SUBJECTAREA, SG.STORECODE, SG.STANDARDGRADE, T.LASTFIRST TEACHER";
                     sql += " FROM ES_VISTA";
-                    sql += " LEFT JOIN STANDARDGRADESECTION SG ON STDCID = SG.STUDENTSDCID AND STDID = SG.STANDARDID AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1', 'T2', 'T3') AND SG.STANDARDGRADE<>'--'";
+                    sql += " LEFT JOIN STANDARDGRADESECTION SG ON STDCID = SG.STUDENTSDCID AND STDID = SG.STANDARDID AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1') AND SG.STANDARDGRADE<>'--'";
                     sql += " LEFT JOIN CC CO ON STID = CO.STUDENTID AND STCOURSE = CO.COURSE_NUMBER  AND CO.ORIGSECTIONID = 0";
                     sql += " LEFT JOIN TEACHERS T ON CO.TEACHERID = T.ID)";
                     sql += " SELECT DISTINCT IDENTIFIER,STID,STUDENT_NUMBER,STUDENT,GRADE_LEVEL,GRADE_LEVEL,TEACHER,STCOURSE,SUBJECTAREA,STDDESC";
@@ -1620,21 +1621,85 @@ namespace HS_REPC_Final
 
                     }
 
-                    //sql += " CREATE OR REPLACE VIEW ES_VISTA_ESP";
-                    //sql += " AS WITH X AS(";
-                    //sql += " SELECT IDENTIFIER, STDID, STDDESC, stcourse, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA FROM(";
-                    //sql += " SELECT ST.STANDARDID STDID, ST.IDENTIFIER, TO_CHAR(TRANSIENTCOURSELIST) stcourse, ST.SUBJECTAREA, ST.NAME STDDESC FROM STANDARD ST";
+                    sql = " CREATE OR REPLACE VIEW ES_VISTA_ESP";
+                    sql += " AS WITH X AS(";
+                    sql += " SELECT IDENTIFIER, STDID, STDDESC, stcourse, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA FROM(";
+                    sql += " SELECT ST.STANDARDID STDID, ST.IDENTIFIER, TO_CHAR(TRANSIENTCOURSELIST) stcourse, ST.SUBJECTAREA, ST.NAME STDDESC FROM STANDARD ST";
+                    if (grade == "2")
+                    {
+                        sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "TECH', '" + grade + "Art', '" + grade + "Mus')";
+                    }
+                    else
+                    {
+                        sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "TECH', '" + grade + "ART', '" + grade + "MUS')";
+                    }
+                            sql += " AND ST.YEARID = 28 AND ST.STANDARDID NOT IN(17299, 17293, 17923)AND isassignmentallowed = 1 AND ISACTIVE = 1)";
+                            sql += " CROSS JOIN";
+                            sql += " (";
+                            sql += " SELECT FIRST_NAME || ' ' || LAST_NAME STUDENT, STUDENT_NUMBER, STUDENTS.DCID AS STDCID, ID AS STID, GRADE_LEVEL FROM STUDENTS";
+                            if (grade == "K")
+                            {
+                                sql += " WHERE GRADE_LEVEL=0 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
+                            }
+                            else if (grade == "PK")
+                            {
+                                sql += " WHERE GRADE_LEVEL=-1 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
+                            }
+                            else
+                            {
+                                sql += " WHERE GRADE_LEVEL='" + grade + "' AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
+                            }
+                            sql += " )";
+                            sql += " SELECT IDENTIFIER, STDID, STDDESC, STCOURSE, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA FROM X";
+
+                            OracleCommand cmdV2 = new OracleCommand(sql, con);
+                            cmdV2.ExecuteNonQuery();
+
+                            sql = " SELECT TEACHER, STCOURSE, LISTAGG(T1,',') WITHIN GROUP (ORDER BY STDDESC) T1,LISTAGG(T2, ',') WITHIN GROUP (ORDER BY STDDESC)T2,LISTAGG(T3, ',') WITHIN GROUP (ORDER BY STDDESC)T3 FROM (";
+                            sql += " WITH MQUERY AS(SELECT IDENTIFIER, STDID, STDDESC, STCOURSE, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL,";
+                            sql += " SUBJECTAREA, SG.STORECODE, SG.STANDARDGRADE, T.LASTFIRST TEACHER";
+                            sql += " FROM ES_VISTA_ESP";
+                            sql += " LEFT JOIN STANDARDGRADESECTION SG ON STDCID = SG.STUDENTSDCID AND sg.yearid = 28 and STDID = SG.STANDARDID AND STANDARDGRADE <> '--'";
+                            sql += "  AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1')";
+                            sql += " LEFT JOIN CC CO ON STID = CO.STUDENTID AND STCOURSE = CO.COURSE_NUMBER  AND CO.ORIGSECTIONID = 0";
+                            sql += " LEFT JOIN TEACHERS T ON CO.TEACHERID = T.ID)";
+                            sql += " SELECT DISTINCT TEACHER, STCOURSE, STDDESC";
+                            sql += " , (SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T1') T1";
+                            sql += " ,(SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T2') T2";
+                            sql += " ,(SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T3') T3";
+                            sql += " FROM MQUERY M";
+                            sql += " )";
+                            sql += " GROUP BY TEACHER,STCOURSE";
+                            sql += " ORDER BY CASE";
+                            sql += " WHEN STCOURSE LIKE '%" + grade + "TECH%' THEN 1";
+                            if (grade == "2")
+                            {
+                                sql += " WHEN STCOURSE LIKE '%" + grade + "Art%' THEN 2";
+                                sql += " WHEN STCOURSE LIKE '%" + grade + "Mus%' THEN 3";
+                            }
+                            else
+                            {
+                                sql += " WHEN STCOURSE LIKE '%" + grade + "ART%' THEN 2";
+                                sql += " WHEN STCOURSE LIKE '%" + grade + "MUS%' THEN 3";
+                            }
+                            sql += " END";
+
+
+                    //        sql = "WITH X AS(";
+                    //sql += " SELECT IDENTIFIER, STANDARDID, STDDESC, stcourse, LASTFIRST, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA FROM(";
+                    //sql += " SELECT ST.STANDARDID, ST.IDENTIFIER, TO_CHAR(TRANSIENTCOURSELIST) stcourse, ST.SUBJECTAREA, ST.NAME STDDESC FROM STANDARD ST";
                     //if (grade == "2")
                     //{
                     //    sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "TECH', '" + grade + "Art', '" + grade + "Mus')";
                     //}
-                    //else { 
-                    //    sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "TECH', '" + grade + "ART', '" + grade + "MUS')";
+                    //else
                     //{
-                    //sql += " AND ST.YEARID = 28 AND ST.STANDARDID NOT IN(17299, 17293, 17923)AND isassignmentallowed = 1 AND ISACTIVE = 1)";
+                    //    sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "TECH', '" + grade + "ART', '" + grade + "MUS')";
+                    //}
+                    //sql += " AND ST.YEARID = 28 AND STANDARDID NOT IN(17299, 17293)AND isassignmentallowed = 1)";
                     //sql += " CROSS JOIN";
                     //sql += " (";
-                    //sql += " SELECT FIRST_NAME || ' ' || LAST_NAME STUDENT, STUDENT_NUMBER, STUDENTS.DCID AS STDCID, ID AS STID, GRADE_LEVEL FROM STUDENTS";
+                    //sql += " SELECT LASTFIRST, STUDENT_NUMBER, STUDENTS.DCID AS STDCID, ID AS STID, GRADE_LEVEL FROM STUDENTS";
                     //if (grade == "K")
                     //{
                     //    sql += " WHERE GRADE_LEVEL=0 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
@@ -1648,80 +1713,17 @@ namespace HS_REPC_Final
                     //    sql += " WHERE GRADE_LEVEL='" + grade + "' AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
                     //}
                     //sql += " )";
-                    //sql += " SELECT IDENTIFIER, STDID, STDDESC, STCOURSE, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA FROM X;";
-
-                    //OracleCommand cmdV2 = new OracleCommand(sql, con);
-                    //cmdV2.ExecuteNonQuery();
-
-                    //sql += " SELECT TEACHER, STCOURSE, LISTAGG(T1,',') WITHIN GROUP (ORDER BY STDDESC) T1,LISTAGG(T2, ',') WITHIN GROUP (ORDER BY STDDESC)T2,LISTAGG(T3, ',') WITHIN GROUP (ORDER BY STDDESC)T3 FROM (";
-                    //sql += " WITH MQUERY AS(SELECT IDENTIFIER, STDID, STDDESC, STCOURSE, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL,";
-                    //sql += " SUBJECTAREA, SG.STORECODE, SG.STANDARDGRADE, T.LASTFIRST TEACHER";
-                    //sql += " FROM ES_VISTA_ESP";
-                    //sql += " LEFT JOIN STANDARDGRADESECTION SG ON STDCID = SG.STUDENTSDCID AND sg.yearid = 28 and STDID = SG.STANDARDID AND STANDARDGRADE <> '--'";
-                    //sql += "  AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1', 'T2', 'T3')";
-                    //sql += " LEFT JOIN CC CO ON STID = CO.STUDENTID AND STCOURSE = CO.COURSE_NUMBER  AND CO.ORIGSECTIONID = 0";
-                    //sql += " LEFT JOIN TEACHERS T ON CO.TEACHERID = T.ID)";
-                    //sql += " SELECT DISTINCT TEACHER, STCOURSE, STDDESC";
-                    //sql += " , (SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T1') T1";
-                    //sql += " ,(SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T2') T2";
-                    //sql += " ,(SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T3') T3";
-                    //sql += " FROM MQUERY M";
+                    //sql += " SELECT STUDENT, TEACHER, STCOURSE,(CASE WHEN STORECODE = 'T1' THEN T_GRADE || '/' || U_GRADE ELSE NULL END)T1";
+                    //sql += " ,(CASE WHEN STORECODE = 'T2' THEN T_GRADE|| '/' || U_GRADE ELSE NULL END)T2";
+                    //sql += " ,(CASE WHEN STORECODE = 'T3' THEN T_GRADE|| '/' || U_GRADE ELSE NULL END)T3";
+                    //sql += " FROM(SELECT X.STDDESC, X.STID, X.STUDENT_NUMBER, X.LASTFIRST STUDENT, T.LASTFIRST TEACHER, X.STCOURSE, SG.STANDARDGRADE, SG.STORECODE";
+                    //sql += " FROM X";
+                    //sql += " LEFT JOIN STANDARDGRADESECTION SG ON X.STDCID = SG.STUDENTSDCID AND X.STANDARDID = SG.STANDARDID AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1') AND SG.STANDARDGRADE<>'--'";
+                    //sql += " LEFT JOIN CC CO ON X.STID = CO.STUDENTID AND X.STCOURSE = CO.COURSE_NUMBER  AND CO.ORIGSECTIONID = 0";
+                    //sql += " LEFT JOIN TEACHERS T ON CO.TEACHERID = T.ID";
                     //sql += " )";
-                    //sql += " GROUP BY TEACHER,STCOURSE";
-                    //sql += " ORDER BY CASE";
-                    //sql += " WHEN STCOURSE LIKE '%" + grade + "TECH%' THEN 1";
-                    //if (grade == "2")
-                    //{
-                    //    sql += " WHEN STCOURSE LIKE '%" + grade + "Art%' THEN 2";
-                    //    sql += " WHEN STCOURSE LIKE '%" + grade + "Mus%' THEN 3";
-                    //}
-                    //else
-                    //{
-                    //    sql += " WHEN STCOURSE LIKE '%" + grade + "ART%' THEN 2";
-                    //    sql += " WHEN STCOURSE LIKE '%" + grade + "MUS%' THEN 3";
-                    //}
-                    //    sql += " END";
-
-
-                    sql = "WITH X AS(";
-                    sql += " SELECT IDENTIFIER, STANDARDID, STDDESC, stcourse, LASTFIRST, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA FROM(";
-                    sql += " SELECT ST.STANDARDID, ST.IDENTIFIER, TO_CHAR(TRANSIENTCOURSELIST) stcourse, ST.SUBJECTAREA, ST.NAME STDDESC FROM STANDARD ST";
-                    if (grade == "2")
-                    {
-                        sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "TECH', '" + grade + "Art', '" + grade + "Mus')";
-                    }
-                    else
-                    {
-                        sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "TECH', '" + grade + "ART', '" + grade + "MUS')";
-                    }
-                    sql += " AND ST.YEARID = 28 AND STANDARDID NOT IN(17299, 17293)AND isassignmentallowed = 1)";
-                    sql += " CROSS JOIN";
-                    sql += " (";
-                    sql += " SELECT LASTFIRST, STUDENT_NUMBER, STUDENTS.DCID AS STDCID, ID AS STID, GRADE_LEVEL FROM STUDENTS";
-                    if (grade == "K")
-                    {
-                        sql += " WHERE GRADE_LEVEL=0 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
-                    }
-                    else if (grade == "PK")
-                    {
-                        sql += " WHERE GRADE_LEVEL=-1 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
-                    }
-                    else
-                    {
-                        sql += " WHERE GRADE_LEVEL='" + grade + "' AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
-                    }
-                    sql += " )";
-                    sql += " SELECT STUDENT, TEACHER, STCOURSE,(CASE WHEN STORECODE = 'T1' THEN T_GRADE || '/' || U_GRADE ELSE NULL END)T1";
-                    sql += " ,(CASE WHEN STORECODE = 'T2' THEN T_GRADE|| '/' || U_GRADE ELSE NULL END)T2";
-                    sql += " ,(CASE WHEN STORECODE = 'T3' THEN T_GRADE|| '/' || U_GRADE ELSE NULL END)T3";
-                    sql += " FROM(SELECT X.STDDESC, X.STID, X.STUDENT_NUMBER, X.LASTFIRST STUDENT, T.LASTFIRST TEACHER, X.STCOURSE, SG.STANDARDGRADE, SG.STORECODE";
-                    sql += " FROM X";
-                    sql += " LEFT JOIN STANDARDGRADESECTION SG ON X.STDCID = SG.STUDENTSDCID AND X.STANDARDID = SG.STANDARDID AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1') AND SG.STANDARDGRADE<>'--'";
-                    sql += " LEFT JOIN CC CO ON X.STID = CO.STUDENTID AND X.STCOURSE = CO.COURSE_NUMBER  AND CO.ORIGSECTIONID = 0";
-                    sql += " LEFT JOIN TEACHERS T ON CO.TEACHERID = T.ID";
-                    sql += " )";
-                    sql += " PIVOT(MAX(standardgrade) AS grade FOR(STDDESC) IN('Understands concepts and uses skills.' AS U,'Follows Tribes® Agreements.' AS T))";
-                    sql += " ORDER BY STUDENT,STCOURSE DESC";
+                    //sql += " PIVOT(MAX(standardgrade) AS grade FOR(STDDESC) IN('Understands concepts and uses skills.' AS U,'Follows Tribes® Agreements.' AS T))";
+                    //sql += " ORDER BY STUDENT,STCOURSE DESC";
 
                     OracleCommand cmd2 = new OracleCommand(sql, con);
                     OracleDataReader odr2 = cmd2.ExecuteReader();
@@ -2316,7 +2318,7 @@ namespace HS_REPC_Final
                                         PdfPCell SPut1;
                                         if (esVal[2] != "")
                                         {
-                                            SPut1 = new PdfPCell(new Phrase(esVal[2].Split('/')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                            SPut1 = new PdfPCell(new Phrase(esVal[2].Split(',')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                         }
                                         else
                                         {
@@ -2329,7 +2331,7 @@ namespace HS_REPC_Final
                                         PdfPCell SPut2;
                                         if (esVal[2] != "")
                                         {
-                                            SPut2 = new PdfPCell(new Phrase(esVal[2].Split('/')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                            SPut2 = new PdfPCell(new Phrase(esVal[2].Split(',')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                         }
                                         else
                                         {
@@ -2342,7 +2344,7 @@ namespace HS_REPC_Final
                                         PdfPCell SPut3;
                                         if (esVal[3] != "")
                                         {
-                                            SPut3 = new PdfPCell(new Phrase(esVal[3].Split('/')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                            SPut3 = new PdfPCell(new Phrase(esVal[3].Split(',')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                         }
                                         else
                                         {
@@ -2355,7 +2357,7 @@ namespace HS_REPC_Final
                                         PdfPCell SPut4;
                                         if (esVal[3] != "")
                                         {
-                                            SPut4 = new PdfPCell(new Phrase(esVal[3].Split('/')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                            SPut4 = new PdfPCell(new Phrase(esVal[3].Split(',')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                         }
                                         else
                                         {
@@ -2369,7 +2371,7 @@ namespace HS_REPC_Final
                                         PdfPCell SPut5;
                                         if (esVal[4] != "")
                                         {
-                                            SPut5 = new PdfPCell(new Phrase(esVal[4].Split('/')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                            SPut5 = new PdfPCell(new Phrase(esVal[4].Split(',')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                         }
                                         else
                                         {
@@ -2382,7 +2384,7 @@ namespace HS_REPC_Final
                                         PdfPCell SPut6;
                                         if (esVal[4] != "")
                                         {
-                                            SPut6 = new PdfPCell(new Phrase(esVal[4].Split('/')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                            SPut6 = new PdfPCell(new Phrase(esVal[4].Split(',')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                         }
                                         else
                                         {
