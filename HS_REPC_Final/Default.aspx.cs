@@ -206,11 +206,28 @@ namespace HS_REPC_Final
                             con.Open();
                              }
 
-
                         sql = " CREATE OR REPLACE VIEW ES_VISTA";
                         sql += " AS WITH X AS(";
-                        sql += " SELECT IDENTIFIER, STDID, STDDESC, stcourse, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA FROM(";
-                        sql += " SELECT ST.STANDARDID STDID, ST.IDENTIFIER, TO_CHAR(TRANSIENTCOURSELIST) stcourse, ST.SUBJECTAREA, ST.NAME STDDESC FROM STANDARD ST";
+                        sql += " SELECT IDENTIFIER, STDID, STDDESC, stcourse, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA, STORDER, STPARENT, STLEVEL, FAMILY, SORTID";
+                        sql += " FROM(";
+                        sql += " SELECT SD.STANDARDID STDID, SD.IDENTIFIER, (CASE WHEN ST.LEVELVALUE = 3 AND ISASSIGNMENTALLOWED = 0 THEN 0  ELSE ST.SORTORDER + 1  END)";
+                        sql += " SORTID,";
+                        sql += " (CASE";
+
+                        sql += " WHEN SD.IDENTIFIER LIKE '%.R%' THEN SUBSTR(SD.IDENTIFIER, 0, INSTR(SD.IDENTIFIER, '.', 1, 3)) || '1'";
+
+                        sql += " WHEN SD.IDENTIFIER LIKE '%.W%' THEN SUBSTR(SD.IDENTIFIER, 0, INSTR(SD.IDENTIFIER, '.', 1, 3)) || '2'";
+
+                        sql += " WHEN SD.IDENTIFIER LIKE '%.SP%' THEN SUBSTR(SD.IDENTIFIER, 0, INSTR(SD.IDENTIFIER, '.', 1, 3)) || '3'";
+
+                        sql += " WHEN SD.IDENTIFIER LIKE '%.SL.%' THEN SUBSTR(SD.IDENTIFIER, 0, INSTR(SD.IDENTIFIER, '.', 1, 3)) || '3'";
+
+                        sql += " ELSE SUBSTR(SD.IDENTIFIER, 0, INSTR(SD.IDENTIFIER, '.', 1, 3)) || '4' END)FAMILY,";
+
+
+                        sql += " TO_CHAR(SD.TRANSIENTCOURSELIST) stcourse, ST.SORTORDER STORDER, ST.LISTPARENT STPARENT, ST.LEVELVALUE STLEVEL, ST.SUBJECTAREA,ST.NAME STDDESC";
+                        sql += " FROM STANDARDS ST";
+                        sql += " LEFT JOIN STANDARD SD ON ST.IDENTIFIER = SD.IDENTIFIER";
                         if (grade == "2")
                         {
                             sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "Ma', '" + grade + "SS', '" + grade + "LA', '" + grade + "SLA', '" + grade + "HR', '" + grade + "SC', '" + grade + "PE')";
@@ -223,10 +240,12 @@ namespace HS_REPC_Final
                         {
                             sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "MA', '" + grade + "SS', '" + grade + "LA', '" + grade + "SLA', '" + grade + "HR', '" + grade + "SC', '" + grade + "PE')";
                         }
-                        sql += " AND ST.YEARID = 28 AND ST.STANDARDID NOT IN(17299, 17293, 17923)AND isassignmentallowed = 1 AND ISACTIVE = 1)";
+
+                        sql += " AND SD.YEARID = 28 AND SD.STANDARDID NOT IN(17299, 17293, 17923)  AND SD.ISACTIVE = 1 AND  isassignmentallowed = 1 AND ST.LEVELVALUE > 1 )";
                         sql += " CROSS JOIN";
                         sql += " (";
                         sql += " SELECT FIRST_NAME || ' ' || LAST_NAME STUDENT, STUDENT_NUMBER, STUDENTS.DCID AS STDCID, ID AS STID, GRADE_LEVEL FROM STUDENTS";
+
                         if (grade == "K")
                         {
                             sql += " WHERE GRADE_LEVEL=0 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnumb[h] + ")";
@@ -240,40 +259,147 @@ namespace HS_REPC_Final
                             sql += " WHERE GRADE_LEVEL='" + grade + "' AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnumb[h] + ")";
                         }
                         sql += " )";
-                        sql += " SELECT IDENTIFIER,STDID,STDDESC,STCOURSE,STUDENT,STUDENT_NUMBER,STDCID,STID,GRADE_LEVEL,SUBJECTAREA FROM X";
+                        sql += " SELECT IDENTIFIER, STDID, STDDESC, STCOURSE, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA, STORDER, STPARENT, STLEVEL, FAMILY, SORTID FROM X";
+
+                        //sql = " CREATE OR REPLACE VIEW ES_VISTA";
+                        //sql += " AS WITH X AS(";
+                        //sql += " SELECT IDENTIFIER, STDID, STDDESC, stcourse, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA FROM(";
+                        //sql += " SELECT ST.STANDARDID STDID, ST.IDENTIFIER, TO_CHAR(TRANSIENTCOURSELIST) stcourse, ST.SUBJECTAREA, ST.NAME STDDESC FROM STANDARD ST";
+                        //if (grade == "2")
+                        //{
+                        //    sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "Ma', '" + grade + "SS', '" + grade + "LA', '" + grade + "SLA', '" + grade + "HR', '" + grade + "SC', '" + grade + "PE')";
+                        //}
+                        //else if (grade == "PK")
+                        //{
+                        //    sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "MA','" + grade + "LA', '" + grade + "SLA', '" + grade + "HR', '" + grade + "SC," + grade + "SS', '" + grade + "PE')";
+                        //}
+                        //else
+                        //{
+                        //    sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "MA', '" + grade + "SS', '" + grade + "LA', '" + grade + "SLA', '" + grade + "HR', '" + grade + "SC', '" + grade + "PE')";
+                        //}
+                        //sql += " AND ST.YEARID = 28 AND ST.STANDARDID NOT IN(17299, 17293, 17923)AND isassignmentallowed = 1 AND ISACTIVE = 1)";
+                        //sql += " CROSS JOIN";
+                        //sql += " (";
+                        //sql += " SELECT FIRST_NAME || ' ' || LAST_NAME STUDENT, STUDENT_NUMBER, STUDENTS.DCID AS STDCID, ID AS STID, GRADE_LEVEL FROM STUDENTS";
+                        //if (grade == "K")
+                        //{
+                        //    sql += " WHERE GRADE_LEVEL=0 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
+                        //}
+                        //else if (grade == "PK")
+                        //{
+                        //    sql += " WHERE GRADE_LEVEL=-1 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
+                        //}
+                        //else
+                        //{
+                        //    sql += " WHERE GRADE_LEVEL='" + grade + "' AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
+                        //}
+                        //sql += " )";
+                        //sql += " SELECT IDENTIFIER,STDID,STDDESC,STCOURSE,STUDENT,STUDENT_NUMBER,STDCID,STID,GRADE_LEVEL,SUBJECTAREA FROM X";
 
                         OracleCommand cmdV1 = new OracleCommand(sql, con);
                         cmdV1.ExecuteNonQuery();
 
 
+
                         sql = " WITH MQUERY AS(SELECT IDENTIFIER, STDID, STDDESC, STCOURSE, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL,";
-                        sql += " SUBJECTAREA, SG.STORECODE, SG.STANDARDGRADE, T.LASTFIRST TEACHER";
+                        sql += " SUBJECTAREA, SG.STORECODE, SG.STANDARDGRADE, T.LASTFIRST TEACHER, STPARENT, STORDER, STLEVEL, FAMILY, SORTID";
                         sql += " FROM ES_VISTA";
-                        sql += " LEFT JOIN STANDARDGRADESECTION SG ON STDCID = SG.STUDENTSDCID AND STDID = SG.STANDARDID AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1') AND SG.STANDARDGRADE<>'--'";
+                        sql += " LEFT JOIN STANDARDGRADESECTION SG ON STDCID = SG.STUDENTSDCID AND sg.yearid = 28 and STDID = SG.STANDARDID AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1', 'T2', 'T3')";
                         sql += " LEFT JOIN CC CO ON STID = CO.STUDENTID AND STCOURSE = CO.COURSE_NUMBER  AND CO.ORIGSECTIONID = 0";
                         sql += " LEFT JOIN TEACHERS T ON CO.TEACHERID = T.ID)";
-                        sql += " SELECT DISTINCT IDENTIFIER,STID,STUDENT_NUMBER,STUDENT,GRADE_LEVEL,GRADE_LEVEL,TEACHER,STCOURSE,SUBJECTAREA,STDDESC";
-                        sql += " ,(SELECT DISTINCT Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T1') T1";
-                        sql += " ,(SELECT DISTINCT Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T2') T2";
-                        sql += " ,(SELECT DISTINCT Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T3') T3";
-                        sql += " FROM MQUERY M";
 
-                        sql += " ORDER BY CASE";
-                        sql += " WHEN STCOURSE LIKE '%" + grade + "HR%' THEN 1";
-                        sql += " WHEN STCOURSE LIKE '%" + grade + "LA%' THEN 2";
+
+                        sql += " SELECT DISTINCT IDENTIFIER,FAMILY,STUDENT,SORTID,STORDER,STPARENT,STLEVEL,STID,STUDENT_NUMBER,GRADE_LEVEL,TEACHER,STCOURSE,SUBJECTAREA,STDDESC";
+                        sql += " ,(SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T1') T1";
+                        sql += " ,(SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T2') T2";
+                        sql += " ,(SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T3') T3";
+
+                        sql += " FROM MQUERY M";
+                        sql += " ORDER BY   CASE";
+                        sql += " WHEN STCOURSE LIKE '%HR%' THEN 1";
+                        sql += " WHEN STCOURSE LIKE '%LA%' THEN 2";
                         if (grade == "2")
                         {
-                            sql += " WHEN STCOURSE LIKE '%" + grade + "Ma%' THEN 3";
+                            sql += " WHEN STCOURSE LIKE '%" + grade + "%Ma%' THEN 3";
                         }
                         else
                         {
-                            sql += " WHEN STCOURSE LIKE '%" + grade + "MA%' THEN 3";
+                            sql += " WHEN STCOURSE LIKE '%" + grade + "%MA%' THEN 3";
                         }
-                        sql += " WHEN STCOURSE LIKE '%" + grade + "SLA%' THEN 4";
-                        sql += " WHEN STCOURSE LIKE '%" + grade + "SS%' THEN 5";
-                        sql += " WHEN STCOURSE LIKE '%" + grade + "SC%' THEN 6";
-                        sql += " WHEN STCOURSE LIKE '%" + grade + "PE%' THEN 7";
-                        sql += " END,IDENTIFIER ASC";
+
+                        sql += " WHEN STCOURSE LIKE '%SLA%' THEN 4";
+                        sql += " WHEN STCOURSE LIKE '%SS%' THEN 5";
+                        sql += " WHEN STCOURSE LIKE '%SC%' THEN 6";
+                        sql += " WHEN STCOURSE LIKE '%PE%' THEN 7";
+                        sql += " END,M.FAMILY,M.SORTID";
+
+                        //sql = " CREATE OR REPLACE VIEW ES_VISTA";
+                        //sql += " AS WITH X AS(";
+                        //sql += " SELECT IDENTIFIER, STDID, STDDESC, stcourse, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA FROM(";
+                        //sql += " SELECT ST.STANDARDID STDID, ST.IDENTIFIER, TO_CHAR(TRANSIENTCOURSELIST) stcourse, ST.SUBJECTAREA, ST.NAME STDDESC FROM STANDARD ST";
+                        //if (grade == "2")
+                        //{
+                        //    sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "Ma', '" + grade + "SS', '" + grade + "LA', '" + grade + "SLA', '" + grade + "HR', '" + grade + "SC', '" + grade + "PE')";
+                        //}
+                        //else if (grade == "PK")
+                        //{
+                        //    sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "MA','" + grade + "LA', '" + grade + "SLA', '" + grade + "HR', '" + grade + "SC," + grade + "SS', '" + grade + "PE')";
+                        //}
+                        //else
+                        //{
+                        //    sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "MA', '" + grade + "SS', '" + grade + "LA', '" + grade + "SLA', '" + grade + "HR', '" + grade + "SC', '" + grade + "PE')";
+                        //}
+                        //sql += " AND ST.YEARID = 28 AND ST.STANDARDID NOT IN(17299, 17293, 17923)AND isassignmentallowed = 1 AND ISACTIVE = 1)";
+                        //sql += " CROSS JOIN";
+                        //sql += " (";
+                        //sql += " SELECT FIRST_NAME || ' ' || LAST_NAME STUDENT, STUDENT_NUMBER, STUDENTS.DCID AS STDCID, ID AS STID, GRADE_LEVEL FROM STUDENTS";
+                        //if (grade == "K")
+                        //{
+                        //    sql += " WHERE GRADE_LEVEL=0 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnumb[h] + ")";
+                        //}
+                        //else if (grade == "PK")
+                        //{
+                        //    sql += " WHERE GRADE_LEVEL=-1 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnumb[h] + ")";
+                        //}
+                        //else
+                        //{
+                        //    sql += " WHERE GRADE_LEVEL='" + grade + "' AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnumb[h] + ")";
+                        //}
+                        //sql += " )";
+                        //sql += " SELECT IDENTIFIER,STDID,STDDESC,STCOURSE,STUDENT,STUDENT_NUMBER,STDCID,STID,GRADE_LEVEL,SUBJECTAREA FROM X";
+
+                        //OracleCommand cmdV1 = new OracleCommand(sql, con);
+                        //cmdV1.ExecuteNonQuery();
+
+
+                        //sql = " WITH MQUERY AS(SELECT IDENTIFIER, STDID, STDDESC, STCOURSE, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL,";
+                        //sql += " SUBJECTAREA, SG.STORECODE, SG.STANDARDGRADE, T.LASTFIRST TEACHER";
+                        //sql += " FROM ES_VISTA";
+                        //sql += " LEFT JOIN STANDARDGRADESECTION SG ON STDCID = SG.STUDENTSDCID AND STDID = SG.STANDARDID AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1') AND SG.STANDARDGRADE<>'--'";
+                        //sql += " LEFT JOIN CC CO ON STID = CO.STUDENTID AND STCOURSE = CO.COURSE_NUMBER  AND CO.ORIGSECTIONID = 0";
+                        //sql += " LEFT JOIN TEACHERS T ON CO.TEACHERID = T.ID)";
+                        //sql += " SELECT DISTINCT IDENTIFIER,STID,STUDENT_NUMBER,STUDENT,GRADE_LEVEL,GRADE_LEVEL,TEACHER,STCOURSE,SUBJECTAREA,STDDESC";
+                        //sql += " ,(SELECT DISTINCT Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T1') T1";
+                        //sql += " ,(SELECT DISTINCT Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T2') T2";
+                        //sql += " ,(SELECT DISTINCT Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T3') T3";
+                        //sql += " FROM MQUERY M";
+
+                        //sql += " ORDER BY CASE";
+                        //sql += " WHEN STCOURSE LIKE '%" + grade + "HR%' THEN 1";
+                        //sql += " WHEN STCOURSE LIKE '%" + grade + "LA%' THEN 2";
+                        //if (grade == "2")
+                        //{
+                        //    sql += " WHEN STCOURSE LIKE '%" + grade + "Ma%' THEN 3";
+                        //}
+                        //else
+                        //{
+                        //    sql += " WHEN STCOURSE LIKE '%" + grade + "MA%' THEN 3";
+                        //}
+                        //sql += " WHEN STCOURSE LIKE '%" + grade + "SLA%' THEN 4";
+                        //sql += " WHEN STCOURSE LIKE '%" + grade + "SS%' THEN 5";
+                        //sql += " WHEN STCOURSE LIKE '%" + grade + "SC%' THEN 6";
+                        //sql += " WHEN STCOURSE LIKE '%" + grade + "PE%' THEN 7";
+                        //sql += " END,IDENTIFIER ASC";
 
 
 
@@ -564,22 +690,13 @@ namespace HS_REPC_Final
 
                             }
 
-
-
                             iTextSharp.text.Image Imagen = iTextSharp.text.Image.GetInstance(HttpContext.Current.Server.MapPath("~/img/WLOGO.jpg"));
                             Imagen.ScalePercent(2.5f);
 
                             iTextSharp.text.Image foto;
-                          //  fileName("file://cms03pws/e$/program%20files/powerschool/data/picture/student/" + stid.Substring(stid.Length - Math.Min(2, stid.Length)) + "/" + stid + "/ph.jpeg");
-                           // {
-                                foto = iTextSharp.text.Image.GetInstance("file://cms03pws/e$/program%20files/powerschool/data/picture/student/" + stid.Substring(stid.Length - Math.Min(2, stid.Length)) + "/" + stid + "/ph.jpeg");
-                                foto.ScalePercent(27f);
-                           // }else
-                            //{
-                            //    foto = iTextSharp.text.Image.GetInstance(HttpContext.Current.Server.MapPath("~/img/perfil.png"));
-                            //    foto.ScalePercent(27f);
-                            //}
 
+                            foto = iTextSharp.text.Image.GetInstance("file://cms03pws/e$/program%20files/powerschool/data/picture/student/" + stid.Substring(stid.Length - Math.Min(2, stid.Length)) + "/" + stid + "/ph.jpeg");
+                            foto.ScalePercent(27f);
 
                             PdfPTable HeadT = new PdfPTable(16);
                             HeadT.HorizontalAlignment = Element.ALIGN_CENTER;
@@ -1496,9 +1613,9 @@ namespace HS_REPC_Final
                             documento.Add(GradeTable);
                             documento.Add(espTable);
 
-                            //Process prc = new System.Diagnostics.Process();
-                            //prc.StartInfo.FileName = fileName;
-                            //prc.Start();
+                            Process prc = new System.Diagnostics.Process();
+                            prc.StartInfo.FileName = fileName;
+                            prc.Start();
                         }
                         else
                         {
@@ -1533,8 +1650,26 @@ namespace HS_REPC_Final
 
                     sql = " CREATE OR REPLACE VIEW ES_VISTA";
                     sql += " AS WITH X AS(";
-                    sql += " SELECT IDENTIFIER, STDID, STDDESC, stcourse, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA FROM(";
-                    sql += " SELECT ST.STANDARDID STDID, ST.IDENTIFIER, TO_CHAR(TRANSIENTCOURSELIST) stcourse, ST.SUBJECTAREA, ST.NAME STDDESC FROM STANDARD ST";
+                    sql += " SELECT IDENTIFIER, STDID, STDDESC, stcourse, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA, STORDER, STPARENT, STLEVEL, FAMILY, SORTID";
+                    sql += " FROM(";
+                    sql += " SELECT SD.STANDARDID STDID, SD.IDENTIFIER, (CASE WHEN ST.LEVELVALUE = 3 AND ISASSIGNMENTALLOWED = 0 THEN 0  ELSE ST.SORTORDER + 1  END)";
+                    sql += " SORTID,";
+                    sql += " (CASE";
+
+                    sql += " WHEN SD.IDENTIFIER LIKE '%.R%' THEN SUBSTR(SD.IDENTIFIER, 0, INSTR(SD.IDENTIFIER, '.', 1, 3)) || '1'";
+
+                    sql += " WHEN SD.IDENTIFIER LIKE '%.W%' THEN SUBSTR(SD.IDENTIFIER, 0, INSTR(SD.IDENTIFIER, '.', 1, 3)) || '2'";
+
+                    sql += " WHEN SD.IDENTIFIER LIKE '%.SP%' THEN SUBSTR(SD.IDENTIFIER, 0, INSTR(SD.IDENTIFIER, '.', 1, 3)) || '3'";
+
+                    sql += " WHEN SD.IDENTIFIER LIKE '%.SL.%' THEN SUBSTR(SD.IDENTIFIER, 0, INSTR(SD.IDENTIFIER, '.', 1, 3)) || '3'";
+
+                    sql += " ELSE SUBSTR(SD.IDENTIFIER, 0, INSTR(SD.IDENTIFIER, '.', 1, 3)) || '4' END)FAMILY,";
+
+
+                    sql += " TO_CHAR(SD.TRANSIENTCOURSELIST) stcourse, ST.SORTORDER STORDER, ST.LISTPARENT STPARENT, ST.LEVELVALUE STLEVEL, ST.SUBJECTAREA,ST.NAME STDDESC";
+                    sql += " FROM STANDARDS ST";
+                    sql += " LEFT JOIN STANDARD SD ON ST.IDENTIFIER = SD.IDENTIFIER";
                     if (grade == "2")
                     {
                         sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "Ma', '" + grade + "SS', '" + grade + "LA', '" + grade + "SLA', '" + grade + "HR', '" + grade + "SC', '" + grade + "PE')";
@@ -1547,10 +1682,12 @@ namespace HS_REPC_Final
                     {
                         sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "MA', '" + grade + "SS', '" + grade + "LA', '" + grade + "SLA', '" + grade + "HR', '" + grade + "SC', '" + grade + "PE')";
                     }
-                    sql += " AND ST.YEARID = 28 AND ST.STANDARDID NOT IN(17299, 17293, 17923)AND isassignmentallowed = 1 AND ISACTIVE = 1)";
+                    
+                    sql += " AND SD.YEARID = 28 AND SD.STANDARDID NOT IN(17299, 17293, 17923)  AND SD.ISACTIVE = 1 AND  isassignmentallowed = 1 AND ST.LEVELVALUE > 1 )";
                     sql += " CROSS JOIN";
                     sql += " (";
                     sql += " SELECT FIRST_NAME || ' ' || LAST_NAME STUDENT, STUDENT_NUMBER, STUDENTS.DCID AS STDCID, ID AS STID, GRADE_LEVEL FROM STUDENTS";
+
                     if (grade == "K")
                     {
                         sql += " WHERE GRADE_LEVEL=0 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
@@ -1564,43 +1701,114 @@ namespace HS_REPC_Final
                         sql += " WHERE GRADE_LEVEL='" + grade + "' AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
                     }
                     sql += " )";
-                    sql += " SELECT IDENTIFIER,STDID,STDDESC,STCOURSE,STUDENT,STUDENT_NUMBER,STDCID,STID,GRADE_LEVEL,SUBJECTAREA FROM X";
+                    sql += " SELECT IDENTIFIER, STDID, STDDESC, STCOURSE, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA, STORDER, STPARENT, STLEVEL, FAMILY, SORTID FROM X";
+
+                    //sql = " CREATE OR REPLACE VIEW ES_VISTA";
+                    //sql += " AS WITH X AS(";
+                    //sql += " SELECT IDENTIFIER, STDID, STDDESC, stcourse, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA FROM(";
+                    //sql += " SELECT ST.STANDARDID STDID, ST.IDENTIFIER, TO_CHAR(TRANSIENTCOURSELIST) stcourse, ST.SUBJECTAREA, ST.NAME STDDESC FROM STANDARD ST";
+                    //if (grade == "2")
+                    //{
+                    //    sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "Ma', '" + grade + "SS', '" + grade + "LA', '" + grade + "SLA', '" + grade + "HR', '" + grade + "SC', '" + grade + "PE')";
+                    //}
+                    //else if (grade == "PK")
+                    //{
+                    //    sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "MA','" + grade + "LA', '" + grade + "SLA', '" + grade + "HR', '" + grade + "SC," + grade + "SS', '" + grade + "PE')";
+                    //}
+                    //else
+                    //{
+                    //    sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "MA', '" + grade + "SS', '" + grade + "LA', '" + grade + "SLA', '" + grade + "HR', '" + grade + "SC', '" + grade + "PE')";
+                    //}
+                    //sql += " AND ST.YEARID = 28 AND ST.STANDARDID NOT IN(17299, 17293, 17923)AND isassignmentallowed = 1 AND ISACTIVE = 1)";
+                    //sql += " CROSS JOIN";
+                    //sql += " (";
+                    //sql += " SELECT FIRST_NAME || ' ' || LAST_NAME STUDENT, STUDENT_NUMBER, STUDENTS.DCID AS STDCID, ID AS STID, GRADE_LEVEL FROM STUDENTS";
+                    //if (grade == "K")
+                    //{
+                    //    sql += " WHERE GRADE_LEVEL=0 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
+                    //}
+                    //else if (grade == "PK")
+                    //{
+                    //    sql += " WHERE GRADE_LEVEL=-1 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
+                    //}
+                    //else
+                    //{
+                    //    sql += " WHERE GRADE_LEVEL='" + grade + "' AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
+                    //}
+                    //sql += " )";
+                    //sql += " SELECT IDENTIFIER,STDID,STDDESC,STCOURSE,STUDENT,STUDENT_NUMBER,STDCID,STID,GRADE_LEVEL,SUBJECTAREA FROM X";
 
                     OracleCommand cmdV1 = new OracleCommand(sql, con);
                     cmdV1.ExecuteNonQuery();
 
 
+
                     sql = " WITH MQUERY AS(SELECT IDENTIFIER, STDID, STDDESC, STCOURSE, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL,";
-                    sql += " SUBJECTAREA, SG.STORECODE, SG.STANDARDGRADE, T.LASTFIRST TEACHER";
+                    sql += " SUBJECTAREA, SG.STORECODE, SG.STANDARDGRADE, T.LASTFIRST TEACHER, STPARENT, STORDER, STLEVEL, FAMILY, SORTID";
                     sql += " FROM ES_VISTA";
-                    sql += " LEFT JOIN STANDARDGRADESECTION SG ON STDCID = SG.STUDENTSDCID AND STDID = SG.STANDARDID AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1') AND SG.STANDARDGRADE<>'--'";
+                    sql += " LEFT JOIN STANDARDGRADESECTION SG ON STDCID = SG.STUDENTSDCID AND sg.yearid = 28 and STDID = SG.STANDARDID AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1', 'T2', 'T3')";
                     sql += " LEFT JOIN CC CO ON STID = CO.STUDENTID AND STCOURSE = CO.COURSE_NUMBER  AND CO.ORIGSECTIONID = 0";
                     sql += " LEFT JOIN TEACHERS T ON CO.TEACHERID = T.ID)";
-                    sql += " SELECT DISTINCT IDENTIFIER,STID,STUDENT_NUMBER,STUDENT,GRADE_LEVEL,GRADE_LEVEL,TEACHER,STCOURSE,SUBJECTAREA,STDDESC";
-                    sql += " ,(SELECT DISTINCT Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T1') T1";
-                    sql += " ,(SELECT DISTINCT Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T2') T2";
-                    sql += " ,(SELECT DISTINCT Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T3') T3";
-                    sql += " FROM MQUERY M";
 
-                    sql += " ORDER BY CASE";
-                    sql += " WHEN STCOURSE LIKE '%" + grade + "HR%' THEN 1";
-                    sql += " WHEN STCOURSE LIKE '%" + grade + "LA%' THEN 2";
+
+                    sql += " SELECT DISTINCT IDENTIFIER,FAMILY,STUDENT,SORTID,STORDER,STPARENT,STLEVEL,STID,STUDENT_NUMBER,GRADE_LEVEL,TEACHER,STCOURSE,SUBJECTAREA,STDDESC";
+                    sql += " ,(SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T1') T1";
+                    sql += " ,(SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T2') T2";
+                    sql += " ,(SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T3') T3";
+
+                    sql += " FROM MQUERY M";
+                    sql += " ORDER BY   CASE";
+                    sql += " WHEN STCOURSE LIKE '%HR%' THEN 1";
+                    sql += " WHEN STCOURSE LIKE '%LA%' THEN 2";
                     if (grade == "2")
                     {
-                        sql += " WHEN STCOURSE LIKE '%" + grade + "Ma%' THEN 3";
+                        sql += " WHEN STCOURSE LIKE '%" + grade + "%Ma%' THEN 3";
                     }
                     else
                     {
-                        sql += " WHEN STCOURSE LIKE '%" + grade + "MA%' THEN 3";
+                        sql += " WHEN STCOURSE LIKE '%" + grade + "%MA%' THEN 3";
                     }
-                    sql += " WHEN STCOURSE LIKE '%" + grade + "SLA%' THEN 4";
-                    sql += " WHEN STCOURSE LIKE '%" + grade + "SS%' THEN 5";
-                    sql += " WHEN STCOURSE LIKE '%" + grade + "SC%' THEN 6";
-                    sql += " WHEN STCOURSE LIKE '%" + grade + "PE%' THEN 7";
-                    sql += " END,IDENTIFIER ASC";
+
+                    sql += " WHEN STCOURSE LIKE '%SLA%' THEN 4";
+                    sql += " WHEN STCOURSE LIKE '%SS%' THEN 5";
+                    sql += " WHEN STCOURSE LIKE '%SC%' THEN 6";
+                    sql += " WHEN STCOURSE LIKE '%PE%' THEN 7";
+                    sql += " END,M.FAMILY,M.SORTID";
 
 
-                   
+
+
+                    //sql = " WITH MQUERY AS(SELECT IDENTIFIER, STDID, STDDESC, STCOURSE, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL,";
+                    //sql += " SUBJECTAREA, SG.STORECODE, SG.STANDARDGRADE, T.LASTFIRST TEACHER";
+                    //sql += " FROM ES_VISTA";
+                    //sql += " LEFT JOIN STANDARDGRADESECTION SG ON STDCID = SG.STUDENTSDCID AND STDID = SG.STANDARDID AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1') AND SG.STANDARDGRADE<>'--'";
+                    //sql += " LEFT JOIN CC CO ON STID = CO.STUDENTID AND STCOURSE = CO.COURSE_NUMBER  AND CO.ORIGSECTIONID = 0";
+                    //sql += " LEFT JOIN TEACHERS T ON CO.TEACHERID = T.ID)";
+                    //sql += " SELECT DISTINCT IDENTIFIER,STID,STUDENT_NUMBER,STUDENT,GRADE_LEVEL,GRADE_LEVEL,TEACHER,STCOURSE,SUBJECTAREA,STDDESC";
+                    //sql += " ,(SELECT DISTINCT Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T1') T1";
+                    //sql += " ,(SELECT DISTINCT Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T2') T2";
+                    //sql += " ,(SELECT DISTINCT Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T3') T3";
+                    //sql += " FROM MQUERY M";
+
+                    //sql += " ORDER BY CASE";
+                    //sql += " WHEN STCOURSE LIKE '%" + grade + "HR%' THEN 1";
+                    //sql += " WHEN STCOURSE LIKE '%" + grade + "LA%' THEN 2";
+                    //if (grade == "2")
+                    //{
+                    //    sql += " WHEN STCOURSE LIKE '%" + grade + "Ma%' THEN 3";
+                    //}
+                    //else
+                    //{
+                    //    sql += " WHEN STCOURSE LIKE '%" + grade + "MA%' THEN 3";
+                    //}
+                    //sql += " WHEN STCOURSE LIKE '%" + grade + "SLA%' THEN 4";
+                    //sql += " WHEN STCOURSE LIKE '%" + grade + "SS%' THEN 5";
+                    //sql += " WHEN STCOURSE LIKE '%" + grade + "SC%' THEN 6";
+                    //sql += " WHEN STCOURSE LIKE '%" + grade + "PE%' THEN 7";
+                    //sql += " END,IDENTIFIER ASC";
+
+
+
 
                     OracleCommand cmd1 = new OracleCommand(sql, con);
                     OracleDataReader odr1 = cmd1.ExecuteReader();
@@ -1633,59 +1841,59 @@ namespace HS_REPC_Final
                     {
                         sql += " WHERE TO_CHAR(TRANSIENTCOURSELIST)  IN('" + grade + "TECH', '" + grade + "ART', '" + grade + "MUS')";
                     }
-                            sql += " AND ST.YEARID = 28 AND ST.STANDARDID NOT IN(17299, 17293, 17923)AND isassignmentallowed = 1 AND ISACTIVE = 1)";
-                            sql += " CROSS JOIN";
-                            sql += " (";
-                            sql += " SELECT FIRST_NAME || ' ' || LAST_NAME STUDENT, STUDENT_NUMBER, STUDENTS.DCID AS STDCID, ID AS STID, GRADE_LEVEL FROM STUDENTS";
-                            if (grade == "K")
-                            {
-                                sql += " WHERE GRADE_LEVEL=0 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
-                            }
-                            else if (grade == "PK")
-                            {
-                                sql += " WHERE GRADE_LEVEL=-1 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
-                            }
-                            else
-                            {
-                                sql += " WHERE GRADE_LEVEL='" + grade + "' AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
-                            }
-                            sql += " )";
-                            sql += " SELECT IDENTIFIER, STDID, STDDESC, STCOURSE, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA FROM X";
+                    sql += " AND ST.YEARID = 28 AND ST.STANDARDID NOT IN(17299, 17293, 17923)AND isassignmentallowed = 1 AND ISACTIVE = 1)";
+                    sql += " CROSS JOIN";
+                    sql += " (";
+                    sql += " SELECT FIRST_NAME || ' ' || LAST_NAME STUDENT, STUDENT_NUMBER, STUDENTS.DCID AS STDCID, ID AS STID, GRADE_LEVEL FROM STUDENTS";
+                    if (grade == "K")
+                    {
+                        sql += " WHERE GRADE_LEVEL=0 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
+                    }
+                    else if (grade == "PK")
+                    {
+                        sql += " WHERE GRADE_LEVEL=-1 AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
+                    }
+                    else
+                    {
+                        sql += " WHERE GRADE_LEVEL='" + grade + "' AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
+                    }
+                    sql += " )";
+                    sql += " SELECT IDENTIFIER, STDID, STDDESC, STCOURSE, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA FROM X";
 
-                            OracleCommand cmdV2 = new OracleCommand(sql, con);
-                            cmdV2.ExecuteNonQuery();
+                    OracleCommand cmdV2 = new OracleCommand(sql, con);
+                    cmdV2.ExecuteNonQuery();
 
-                            sql = " SELECT TEACHER, STCOURSE, LISTAGG(T1,',') WITHIN GROUP (ORDER BY STDDESC) T1,LISTAGG(T2, ',') WITHIN GROUP (ORDER BY STDDESC)T2,LISTAGG(T3, ',') WITHIN GROUP (ORDER BY STDDESC)T3 FROM (";
-                            sql += " WITH MQUERY AS(SELECT IDENTIFIER, STDID, STDDESC, STCOURSE, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL,";
-                            sql += " SUBJECTAREA, SG.STORECODE, SG.STANDARDGRADE, T.LASTFIRST TEACHER";
-                            sql += " FROM ES_VISTA_ESP";
-                            sql += " LEFT JOIN STANDARDGRADESECTION SG ON STDCID = SG.STUDENTSDCID AND sg.yearid = 28 and STDID = SG.STANDARDID AND STANDARDGRADE <> '--'";
-                            sql += "  AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1')";
-                            sql += " LEFT JOIN CC CO ON STID = CO.STUDENTID AND STCOURSE = CO.COURSE_NUMBER  AND CO.ORIGSECTIONID = 0";
-                            sql += " LEFT JOIN TEACHERS T ON CO.TEACHERID = T.ID)";
-                            sql += " SELECT DISTINCT TEACHER, STCOURSE, STDDESC";
-                            sql += " , (SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T1') T1";
-                            sql += " ,(SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T2') T2";
-                            sql += " ,(SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T3') T3";
-                            sql += " FROM MQUERY M";
-                            sql += " )";
-                            sql += " GROUP BY TEACHER,STCOURSE";
-                            sql += " ORDER BY CASE";
-                            sql += " WHEN STCOURSE LIKE '%" + grade + "TECH%' THEN 1";
-                            if (grade == "2")
-                            {
-                                sql += " WHEN STCOURSE LIKE '%" + grade + "Art%' THEN 2";
-                                sql += " WHEN STCOURSE LIKE '%" + grade + "Mus%' THEN 3";
-                            }
-                            else
-                            {
-                                sql += " WHEN STCOURSE LIKE '%" + grade + "ART%' THEN 2";
-                                sql += " WHEN STCOURSE LIKE '%" + grade + "MUS%' THEN 3";
-                            }
-                            sql += " END";
+                    sql = " SELECT TEACHER, STCOURSE, LISTAGG(T1,'/') WITHIN GROUP (ORDER BY STDDESC) T1,LISTAGG(T2, '/') WITHIN GROUP (ORDER BY STDDESC)T2,LISTAGG(T3, '/') WITHIN GROUP (ORDER BY STDDESC)T3 FROM (";
+                    sql += " WITH MQUERY AS(SELECT IDENTIFIER, STDID, STDDESC, STCOURSE, STUDENT, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL,";
+                    sql += " SUBJECTAREA, SG.STORECODE, SG.STANDARDGRADE, T.LASTFIRST TEACHER";
+                    sql += " FROM ES_VISTA_ESP";
+                    sql += " LEFT JOIN STANDARDGRADESECTION SG ON STDCID = SG.STUDENTSDCID AND sg.yearid = 28 and STDID = SG.STANDARDID AND STANDARDGRADE <> '--'";
+                    sql += "  AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1')";
+                    sql += " LEFT JOIN CC CO ON STID = CO.STUDENTID AND STCOURSE = CO.COURSE_NUMBER  AND CO.ORIGSECTIONID = 0";
+                    sql += " LEFT JOIN TEACHERS T ON CO.TEACHERID = T.ID)";
+                    sql += " SELECT DISTINCT TEACHER, STCOURSE, STDDESC";
+                    sql += " , (SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T1') T1";
+                    sql += " ,(SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T2') T2";
+                    sql += " ,(SELECT distinct Y.STANDARDGRADE FROM MQUERY y WHERE y.IDENTIFIER = M.IDENTIFIER AND Y.STORECODE = 'T3') T3";
+                    sql += " FROM MQUERY M";
+                    sql += " )";
+                    sql += " GROUP BY TEACHER,STCOURSE";
+                    sql += " ORDER BY CASE";
+                    sql += " WHEN STCOURSE LIKE '%" + grade + "TECH%' THEN 1";
+                    if (grade == "2")
+                    {
+                        sql += " WHEN STCOURSE LIKE '%" + grade + "Art%' THEN 2";
+                        sql += " WHEN STCOURSE LIKE '%" + grade + "Mus%' THEN 3";
+                    }
+                    else
+                    {
+                        sql += " WHEN STCOURSE LIKE '%" + grade + "ART%' THEN 2";
+                        sql += " WHEN STCOURSE LIKE '%" + grade + "MUS%' THEN 3";
+                    }
+                    sql += " END";
 
 
-                    //        sql = "WITH X AS(";
+                    //sql = "WITH X AS(";
                     //sql += " SELECT IDENTIFIER, STANDARDID, STDDESC, stcourse, LASTFIRST, STUDENT_NUMBER, STDCID, STID, GRADE_LEVEL, SUBJECTAREA FROM(";
                     //sql += " SELECT ST.STANDARDID, ST.IDENTIFIER, TO_CHAR(TRANSIENTCOURSELIST) stcourse, ST.SUBJECTAREA, ST.NAME STDDESC FROM STANDARD ST";
                     //if (grade == "2")
@@ -1713,9 +1921,9 @@ namespace HS_REPC_Final
                     //    sql += " WHERE GRADE_LEVEL='" + grade + "' AND ENROLL_STATUS = 0 AND STUDENT_NUMBER =" + stnum + ")";
                     //}
                     //sql += " )";
-                    //sql += " SELECT STUDENT, TEACHER, STCOURSE,(CASE WHEN STORECODE = 'T1' THEN T_GRADE || '/' || U_GRADE ELSE NULL END)T1";
-                    //sql += " ,(CASE WHEN STORECODE = 'T2' THEN T_GRADE|| '/' || U_GRADE ELSE NULL END)T2";
-                    //sql += " ,(CASE WHEN STORECODE = 'T3' THEN T_GRADE|| '/' || U_GRADE ELSE NULL END)T3";
+                    //sql += " SELECT STUDENT, TEACHER, STCOURSE,(CASE WHEN STORECODE = 'T1' THEN T_GRADE || ',' || U_GRADE ELSE NULL END)T1";
+                    //sql += " ,(CASE WHEN STORECODE = 'T2' THEN T_GRADE|| ',' || U_GRADE ELSE NULL END)T2";
+                    //sql += " ,(CASE WHEN STORECODE = 'T3' THEN T_GRADE|| ',' || U_GRADE ELSE NULL END)T3";
                     //sql += " FROM(SELECT X.STDDESC, X.STID, X.STUDENT_NUMBER, X.LASTFIRST STUDENT, T.LASTFIRST TEACHER, X.STCOURSE, SG.STANDARDGRADE, SG.STORECODE";
                     //sql += " FROM X";
                     //sql += " LEFT JOIN STANDARDGRADESECTION SG ON X.STDCID = SG.STUDENTSDCID AND X.STANDARDID = SG.STANDARDID AND SG.STANDARDID IS NOT NULL AND SG.STORECODE IN('T1') AND SG.STANDARDGRADE<>'--'";
@@ -1736,9 +1944,9 @@ namespace HS_REPC_Final
                         T1ESP += odr2["T3"].ToString() + '^';
                     }
 
-                    sql = " SELECT LISTAGG(T1,',') WITHIN GROUP (ORDER BY STUDENT) T1,LISTAGG(T2, ',') WITHIN GROUP (ORDER BY STUDENT) T2,LISTAGG(T3, ',') WITHIN GROUP (ORDER BY STUDENT) T3 FROM (SELECT STUDENT,";
-                    sql += " (CASE WHEN ABBRE = 'T1' THEN COUNT(ABSENCE) || ',' || COUNT(TARDI) END)T1,(CASE WHEN ABBRE = 'T2' THEN COUNT(ABSENCE) || ',' || COUNT(TARDI) END)T2";
-                    sql += " ,(CASE WHEN ABBRE = 'T3' THEN COUNT(ABSENCE) || ',' || COUNT(TARDI) END)T3 FROM (SELECT DISTINCT S.LASTFIRST STUDENT,";
+                    sql = " SELECT LISTAGG(T1,'/') WITHIN GROUP (ORDER BY STUDENT) T1,LISTAGG(T2, '/') WITHIN GROUP (ORDER BY STUDENT) T2,LISTAGG(T3, '/') WITHIN GROUP (ORDER BY STUDENT) T3 FROM (SELECT STUDENT,";
+                    sql += " (CASE WHEN ABBRE = 'T1' THEN COUNT(ABSENCE) || '/' || COUNT(TARDI) END)T1,(CASE WHEN ABBRE = 'T2' THEN COUNT(ABSENCE) || '/' || COUNT(TARDI) END)T2";
+                    sql += " ,(CASE WHEN ABBRE = 'T3' THEN COUNT(ABSENCE) || '/' || COUNT(TARDI) END)T3 FROM (SELECT DISTINCT S.LASTFIRST STUDENT,";
                     sql += " AC.ATT_CODE, (CASE WHEN(AC.ATT_CODE = 'EA' OR AC.ATT_CODE = 'UA') THEN AC.PRESENCE_STATUS_CD END) ABSENCE,";
                     sql += " (CASE  WHEN(AC.ATT_CODE = 'ET' OR AC.ATT_CODE = 'UT') THEN AC.PRESENCE_STATUS_CD END) TARDI, AT.ATT_DATE,T.ABBREVIATION ABBRE FROM ATTENDANCE AT";
                     sql += " LEFT JOIN STUDENTS S ON AT.STUDENTID = S.ID";
@@ -1758,7 +1966,7 @@ namespace HS_REPC_Final
                     //sql += " )";
                     //sql += " GROUP BY STUDENT";
 
-                    
+
 
 
                     string ABTAR = string.Empty;
@@ -1832,10 +2040,10 @@ namespace HS_REPC_Final
 
                         iTextSharp.text.Image Imagen = iTextSharp.text.Image.GetInstance(HttpContext.Current.Server.MapPath("~/img/WLOGO.jpg"));
                         Imagen.ScalePercent(2.5f);
-                       
-                        iTextSharp.text.Image foto = iTextSharp.text.Image.GetInstance("file://cms03pws/e$/program%20files/powerschool/data/picture/student/"+ stid.Substring(stid.Length - Math.Min(2, stid.Length)) +"/"+stid+ "/ph.jpeg");
-                       foto.ScalePercent(27f);
-                    
+
+                        iTextSharp.text.Image foto = iTextSharp.text.Image.GetInstance("file://cms03pws/e$/program%20files/powerschool/data/picture/student/" + stid.Substring(stid.Length - Math.Min(2, stid.Length)) + "/" + stid + "/ph.jpeg");
+                        foto.ScalePercent(27f);
+
 
                         PdfPTable HeadT = new PdfPTable(16);
                         HeadT.HorizontalAlignment = Element.ALIGN_CENTER;
@@ -2159,7 +2367,7 @@ namespace HS_REPC_Final
 
                             if (hr[5]!= "Handwriting") { 
                                 
-                                if (subt != hr[5] )
+                     if (subt != hr[5] )
                             {
 
                                     PdfPCell subj = new PdfPCell(new Phrase(hr[5], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
@@ -2318,7 +2526,7 @@ namespace HS_REPC_Final
                                         PdfPCell SPut1;
                                         if (esVal[2] != "")
                                         {
-                                            SPut1 = new PdfPCell(new Phrase(esVal[2].Split(',')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                            SPut1 = new PdfPCell(new Phrase(esVal[2].Split('/')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                         }
                                         else
                                         {
@@ -2331,7 +2539,7 @@ namespace HS_REPC_Final
                                         PdfPCell SPut2;
                                         if (esVal[2] != "")
                                         {
-                                            SPut2 = new PdfPCell(new Phrase(esVal[2].Split(',')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                            SPut2 = new PdfPCell(new Phrase(esVal[2].Split('/')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                         }
                                         else
                                         {
@@ -2344,7 +2552,7 @@ namespace HS_REPC_Final
                                         PdfPCell SPut3;
                                         if (esVal[3] != "")
                                         {
-                                            SPut3 = new PdfPCell(new Phrase(esVal[3].Split(',')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                            SPut3 = new PdfPCell(new Phrase(esVal[3].Split('/')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                         }
                                         else
                                         {
@@ -2357,7 +2565,7 @@ namespace HS_REPC_Final
                                         PdfPCell SPut4;
                                         if (esVal[3] != "")
                                         {
-                                            SPut4 = new PdfPCell(new Phrase(esVal[3].Split(',')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                            SPut4 = new PdfPCell(new Phrase(esVal[3].Split('/')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                         }
                                         else
                                         {
@@ -2371,7 +2579,7 @@ namespace HS_REPC_Final
                                         PdfPCell SPut5;
                                         if (esVal[4] != "")
                                         {
-                                            SPut5 = new PdfPCell(new Phrase(esVal[4].Split(',')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                            SPut5 = new PdfPCell(new Phrase(esVal[4].Split('/')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                         }
                                         else
                                         {
@@ -2384,7 +2592,7 @@ namespace HS_REPC_Final
                                         PdfPCell SPut6;
                                         if (esVal[4] != "")
                                         {
-                                            SPut6 = new PdfPCell(new Phrase(esVal[4].Split(',')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                            SPut6 = new PdfPCell(new Phrase(esVal[4].Split('/')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                         }
                                         else
                                         {
@@ -2455,7 +2663,7 @@ namespace HS_REPC_Final
                             {
                                 if (ABTAR.Split('|')[0] != "")
                                 {
-                                    PdfPCell abt = new PdfPCell(new Phrase(ABTAR.Split('|')[0].Split(',')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                    PdfPCell abt = new PdfPCell(new Phrase(ABTAR.Split('|')[0].Split('/')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                     abt.HorizontalAlignment = Element.ALIGN_CENTER;
                                     abt.BorderColor = BaseColor.GRAY;
                                     espTable.AddCell(abt);
@@ -2471,7 +2679,7 @@ namespace HS_REPC_Final
                                 if (ABTAR.Split('|')[1] != "")
                                 {
 
-                                    PdfPCell abt1 = new PdfPCell(new Phrase(ABTAR.Split('|')[1].Split(',')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                    PdfPCell abt1 = new PdfPCell(new Phrase(ABTAR.Split('|')[1].Split('/')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                     abt1.HorizontalAlignment = Element.ALIGN_CENTER;
                                     abt1.BorderColor = BaseColor.GRAY;
                                     espTable.AddCell(abt1);
@@ -2485,7 +2693,7 @@ namespace HS_REPC_Final
                                 }
                                 if (ABTAR.Split('|')[2] != "")
                                 {
-                                    PdfPCell abt2 = new PdfPCell(new Phrase(ABTAR.Split('|')[2].Split(',')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                    PdfPCell abt2 = new PdfPCell(new Phrase(ABTAR.Split('|')[2].Split('/')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                     abt2.HorizontalAlignment = Element.ALIGN_CENTER;
                                     abt2.BorderColor = BaseColor.GRAY;
                                     espTable.AddCell(abt2);
@@ -2530,7 +2738,7 @@ namespace HS_REPC_Final
                             {
                                 if (ABTAR.Split('|')[0] != "")
                                 {
-                                    PdfPCell tard1 = new PdfPCell(new Phrase(ABTAR.Split('|')[0].Split(',')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                    PdfPCell tard1 = new PdfPCell(new Phrase(ABTAR.Split('|')[0].Split('/')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                     tard1.HorizontalAlignment = Element.ALIGN_CENTER;
                                     tard1.BorderColor = BaseColor.GRAY;
                                     espTable.AddCell(tard1);
@@ -2544,7 +2752,7 @@ namespace HS_REPC_Final
                                 }
                                 if (ABTAR.Split('|')[1] != "")
                                 {
-                                    PdfPCell tard2 = new PdfPCell(new Phrase(ABTAR.Split('|')[1].Split(',')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                    PdfPCell tard2 = new PdfPCell(new Phrase(ABTAR.Split('|')[1].Split('/')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                     tard2.HorizontalAlignment = Element.ALIGN_CENTER;
                                     tard2.BorderColor = BaseColor.GRAY;
                                     espTable.AddCell(tard2);
@@ -2558,7 +2766,7 @@ namespace HS_REPC_Final
                                 }
                                 if (ABTAR.Split('|')[2] != "")
                                 {
-                                    PdfPCell tard4 = new PdfPCell(new Phrase(ABTAR.Split('|')[2].Split(',')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                    PdfPCell tard4 = new PdfPCell(new Phrase(ABTAR.Split('|')[2].Split('/')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                     tard4.HorizontalAlignment = Element.ALIGN_CENTER;
                                     tard4.BorderColor = BaseColor.GRAY;
                                     espTable.AddCell(tard4);
@@ -2634,7 +2842,7 @@ namespace HS_REPC_Final
                                 if (ABTAR.Split('|')[0] != "")
                                 {
 
-                                    PdfPCell abt = new PdfPCell(new Phrase(ABTAR.Split('|')[0].Split(',')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                    PdfPCell abt = new PdfPCell(new Phrase(ABTAR.Split('|')[0].Split('/')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                     abt.HorizontalAlignment = Element.ALIGN_CENTER;
                                     abt.BorderColor = BaseColor.GRAY;
                                     espTable.AddCell(abt);
@@ -2648,7 +2856,7 @@ namespace HS_REPC_Final
                                 }
                                 if (ABTAR.Split('|')[1] != "")
                                 {
-                                    PdfPCell abt1 = new PdfPCell(new Phrase(ABTAR.Split('|')[1].Split(',')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                    PdfPCell abt1 = new PdfPCell(new Phrase(ABTAR.Split('|')[1].Split('/')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                     abt1.HorizontalAlignment = Element.ALIGN_CENTER;
                                     abt1.BorderColor = BaseColor.GRAY;
                                     espTable.AddCell(abt1);
@@ -2662,7 +2870,7 @@ namespace HS_REPC_Final
                                 }
                                 if (ABTAR.Split('|')[2] != "")
                                 {
-                                    PdfPCell abt2 = new PdfPCell(new Phrase(ABTAR.Split('|')[2].Split(',')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                    PdfPCell abt2 = new PdfPCell(new Phrase(ABTAR.Split('|')[2].Split('/')[0], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                     abt2.HorizontalAlignment = Element.ALIGN_CENTER;
                                     abt2.BorderColor = BaseColor.GRAY;
                                     espTable.AddCell(abt2);
@@ -2685,7 +2893,7 @@ namespace HS_REPC_Final
                             {
                                 if (ABTAR.Split('|')[0] != "")
                                 {
-                                    PdfPCell tard1 = new PdfPCell(new Phrase(ABTAR.Split('|')[0].Split(',')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                    PdfPCell tard1 = new PdfPCell(new Phrase(ABTAR.Split('|')[0].Split('/')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                     tard1.HorizontalAlignment = Element.ALIGN_CENTER;
                                     tard1.BorderColor = BaseColor.GRAY;
                                     espTable.AddCell(tard1);
@@ -2699,7 +2907,7 @@ namespace HS_REPC_Final
                                 }
                                 if (ABTAR.Split('|')[1] != "")
                                 {
-                                    PdfPCell tard2 = new PdfPCell(new Phrase(ABTAR.Split('|')[1].Split(',')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                    PdfPCell tard2 = new PdfPCell(new Phrase(ABTAR.Split('|')[1].Split('/')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                     tard2.HorizontalAlignment = Element.ALIGN_CENTER;
                                     tard2.BorderColor = BaseColor.GRAY;
                                     espTable.AddCell(tard2);
@@ -2713,7 +2921,7 @@ namespace HS_REPC_Final
                                 }
                                 if (ABTAR.Split('|')[2] != "")
                                 {
-                                    PdfPCell tard4 = new PdfPCell(new Phrase(ABTAR.Split('|')[2].Split(',')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
+                                    PdfPCell tard4 = new PdfPCell(new Phrase(ABTAR.Split('|')[2].Split('/')[1], new Font(Font.FontFamily.HELVETICA, 10.0F, Font.NORMAL, BaseColor.BLACK)));
                                     tard4.HorizontalAlignment = Element.ALIGN_CENTER;
                                     tard4.BorderColor = BaseColor.GRAY;
                                     espTable.AddCell(tard4);
@@ -2753,6 +2961,1300 @@ namespace HS_REPC_Final
                        documento.Add(GradeTable);
                         documento.Add(espTable);
 
+                        Process prc = new System.Diagnostics.Process();
+                        prc.StartInfo.FileName = fileName;
+                        prc.Start();
+                    }
+                    else
+                    {
+                        con.Close();
+                        fname = "";
+                    }
+                    con.Close();
+
+                }
+
+                documento.Close();
+                con.Dispose();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            return fname;
+        }
+
+        
+        [WebMethod]
+        public static string MSXIXREPORCARD(string stnum)
+        {
+            string sql = string.Empty;
+
+
+
+            string fname = string.Empty;
+            string fileName = string.Empty;
+            OracleConnection con = new OracleConnection();
+            con.ConnectionString = System.Configuration.ConfigurationManager.ConnectionStrings["conn"].ConnectionString;
+            Document documento = new Document(PageSize.LETTER, 10, 10, 5, 5);
+            try
+            {
+
+                if (stnum.IndexOf(';') > -1)
+                {
+                    var stnumb = stnum.Split(';');
+                    fname = "MS_ProgressReport_" + DateTime.Now.DayOfYear + DateTime.Now.Month + DateTime.Now.Day + DateTime.Now.Millisecond + ".pdf";
+                    fileName = HttpContext.Current.Server.MapPath("~/RepoFiles/" + fname);
+                    PdfWriter.GetInstance(documento, new FileStream(fileName, FileMode.Create));
+                    documento.Open();
+
+                    for (int a = 0; a < stnumb.Length; a++)
+                    {
+                        string Q1DATA = string.Empty;
+                        string Q1AD = string.Empty;
+                        string EXPDATA = string.Empty;
+                        if (con.State == ConnectionState.Closed)
+                        {
+                            con.Open();
+                        }
+
+                        //RESP.
+
+                        sql = "CREATE OR REPLACE VIEW MS_PRO_REP_RES";
+                        sql += " AS SELECT S.ID,SEC.ID AS SECTID,S.STUDENT_NUMBER,s.Last_Name,s.First_name,C.COURSE_NAME,SG.STANDARDGRADE AS RES FROM standardgradesection sg";
+                        sql += " LEFT JOIN STANDARD D ON sg.standardid = D.standardid";
+                        sql += " LEFT JOIN STANDARD Di ON sg.standardid = Di.standardid";
+                        sql += " LEFT JOIN SECTIONS SEC ON SG.SECTIONSDCID = SEC.dcid";
+                        sql += " LEFT JOIN COURSES C ON SEC.COURSE_NUMBER = C.COURSE_NUMBER";
+                        sql += " LEFT JOIN TEACHERS T ON SEC.TEACHER = T.id";
+                        sql += " LEFT JOIN STUDENTS s ON sg.studentsdcid = s.dcid";
+                        sql += " WHERE D.identifier LIKE '%RES%' AND C.COURSE_NAME NOT LIKE '%Explora%' AND C.COURSE_NAME NOT LIKE '%Space%' AND C.COURSE_NAME NOT LIKE '%Boot%' AND sg.yearid = 28";
+                        sql += " AND sg.storecode IN ('Q1') AND SG.SCHOOLSDCID = 5 AND S.STUDENT_NUMBER =" + stnumb[a] + "";
+
+
+                        OracleCommand cmdV1 = new OracleCommand(sql, con);
+                        cmdV1.ExecuteNonQuery();
+
+                        //CONDUCT.
+                        sql = "CREATE OR REPLACE VIEW MS_PRO_REP_CON";
+                        sql += " AS SELECT S.ID,SEC.ID AS SECID,S.STUDENT_NUMBER,s.Last_Name,s.First_name,C.COURSE_NAME,SG.STANDARDGRADE AS COND FROM standardgradesection sg";
+                        sql += " LEFT JOIN STANDARD D ON sg.standardid = D.standardid";
+                        sql += " LEFT JOIN SECTIONS SEC ON SG.SECTIONSDCID = SEC.dcid";
+                        sql += " LEFT JOIN COURSES C ON SEC.COURSE_NUMBER = C.COURSE_NUMBER";
+                        sql += " LEFT JOIN TEACHERS T ON SEC.TEACHER = T.id";
+                        sql += " LEFT JOIN STUDENTS s ON sg.studentsdcid = s.dcid";
+                        sql += " WHERE D.identifier LIKE '%CON%' AND C.COURSE_NAME NOT LIKE '%Explora%' AND C.COURSE_NAME NOT LIKE '%Advisory%' AND C.COURSE_NAME NOT LIKE '%Space%' AND C.COURSE_NAME NOT LIKE '%Boot%' AND sg.yearid = 28";
+                        sql += " AND sg.storecode IN ('Q1') AND SG.SCHOOLSDCID = 5 AND S.STUDENT_NUMBER = " + stnumb[a] + "";
+
+
+                        OracleCommand cmdV2 = new OracleCommand(sql, con);
+                        cmdV2.ExecuteNonQuery();
+
+
+                        //Advisory Teacher
+                        sql = "SELECT DISTINCT C.COURSE_NAME,T.FIRST_NAME||' '||T.LAST_NAME AS TEACHER,R.RES,S.STUDENT_NUMBER,S.FIRST_NAME||' '||S.LAST_NAME AS STUDENT,S.GRADE_LEVEL FROM CC CO";
+                        sql += " LEFT JOIN STUDENTS S ON CO.STUDENTID = S.ID";
+                        sql += " LEFT JOIN COURSES C ON CO.COURSE_NUMBER = C.COURSE_NUMBER";
+                        sql += " LEFT JOIN TEACHERS T ON CO.TEACHERID = T.ID";
+                        sql += " LEFT JOIN MS_PRO_REP_RES R ON CO.STUDENTID = R.ID AND CO.SECTIONID = R.SECTID";
+                        sql += " WHERE CO.TERMID IN(2800, 2801, 2802)  AND C.COURSE_NAME LIKE '%Advisory%' AND S.STUDENT_NUMBER =" + stnumb[a] + "";
+
+                        OracleCommand cmd = new OracleCommand(sql, con);
+                        OracleDataReader odr = cmd.ExecuteReader();
+                        while (odr.Read())
+                        {
+                            Q1AD += odr["COURSE_NAME"].ToString() + '|';
+                            Q1AD += odr["TEACHER"].ToString() + '|';
+                            Q1AD += odr["RES"].ToString() + '|';
+                            Q1AD += odr["STUDENT_NUMBER"].ToString() + '|';
+                            Q1AD += odr["STUDENT"].ToString() + '|';
+                            Q1AD += odr["GRADE_LEVEL"].ToString() + '|';
+
+                        }
+
+
+                        //GRADES VALUES
+                        sql = "WITH main_query AS ( SELECT C.COURSE_NAME,T.FIRST_NAME||' '||T.LAST_NAME AS TEACHER, PG.FINALGRADENAME,PG.GRADE,R.RES,CN.COND,";
+                        sql += " TO_CHAR(PG.COMMENT_VALUE) AS COMMENTS,CO.CURRENTABSENCES,CO.CURRENTTARDIES FROM CC CO";
+                        sql += " LEFT JOIN STUDENTS S ON CO.STUDENTID=S.ID";
+                        sql += " LEFT JOIN COURSES C ON CO.COURSE_NUMBER=C.COURSE_NUMBER";
+                        sql += " LEFT JOIN TEACHERS T ON CO.TEACHERID=T.ID";
+                        sql += " LEFT JOIN PGFINALGRADES PG ON CO.STUDENTID=PG.STUDENTID AND CO.SECTIONID=PG.SECTIONID AND FINALGRADENAME='Q1'";
+                        sql += " LEFT JOIN MS_PRO_REP_RES R ON CO.STUDENTID = R.ID AND CO.SECTIONID = R.SECTID";
+                        sql += " LEFT JOIN MS_PRO_REP_CON CN ON CO.STUDENTID = CN.ID AND CO.SECTIONID = CN.SECID";
+                        sql += " WHERE CO.TERMID IN(2800,2801,2802) AND PG.FINALGRADENAME IN ('Q1') AND C.COURSE_NAME NOT LIKE '%Explora%' AND C.COURSE_NAME NOT LIKE '%Space%' AND C.COURSE_NAME NOT LIKE '%Advisory%' AND C.COURSE_NAME NOT LIKE '%Boot%' AND S.STUDENT_NUMBER=" + stnumb[a] + "";
+                        sql += " )";
+                        sql += " SELECT DISTINCT COURSE_NAME,TEACHER";
+                        sql += " ,(SELECT  y.GRADE FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.FINALGRADENAME='Q1') SKILL";
+                        sql += " ,(SELECT  y.RES FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.FINALGRADENAME='Q1') RESP";
+                        sql += " ,(SELECT  y.COND FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.FINALGRADENAME='Q1') CONDT";
+                        sql += " ,(SELECT  y.CURRENTABSENCES FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.FINALGRADENAME='Q1') ABS1";
+                        sql += " ,(SELECT  y.CURRENTTARDIES FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.FINALGRADENAME = 'Q1') TARDI";
+                        sql += " ,(SELECT  y.COMMENTS FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.FINALGRADENAME = 'Q1') Comments";
+                        sql += "  FROM	main_query M";
+                        sql += " ORDER BY COURSE_NAME";
+
+                        OracleCommand cmd1 = new OracleCommand(sql, con);
+                        OracleDataReader odr1 = cmd1.ExecuteReader();
+                        while (odr1.Read())
+                        {
+                            Q1DATA += odr1["COURSE_NAME"].ToString() + '|';
+                            Q1DATA += odr1["TEACHER"].ToString() + '|';
+                            Q1DATA += odr1["SKILL"].ToString() + '|';
+                            Q1DATA += odr1["RESP"].ToString() + '|';
+                            Q1DATA += odr1["CONDT"].ToString() + '|';
+                            Q1DATA += odr1["ABS1"].ToString() + '|';
+                            Q1DATA += odr1["TARDI"].ToString() + '|';
+                            Q1DATA += odr1["Comments"].ToString() + '^';
+
+                        }
+
+                        //EXPLORATORY RES.
+                        sql = "CREATE OR REPLACE VIEW MS_PRO_EXP_RES";
+                        sql += " AS SELECT S.ID AS STID,SEC.ID AS SECID,S.STUDENT_NUMBER,s.Last_Name,s.First_name,C.COURSE_NAME,SG.STANDARDGRADE AS RES FROM standardgradesection sg";
+                        sql += " LEFT JOIN STANDARD D ON sg.standardid = D.standardid";
+                        sql += " LEFT JOIN SECTIONS SEC ON SG.SECTIONSDCID = SEC.dcid";
+                        sql += " LEFT JOIN COURSES C ON SEC.COURSE_NUMBER = C.COURSE_NUMBER";
+                        sql += " LEFT JOIN TEACHERS T ON SEC.TEACHER = T.id";
+                        sql += " LEFT JOIN STUDENTS s ON sg.studentsdcid = s.dcid";
+                        sql += " WHERE D.identifier LIKE '%RES%' AND sg.yearid = 28 AND";
+                        sql += " (C.COURSE_NAME LIKE '%Explora%' OR C.COURSE_NAME LIKE '%Boot%' OR C.COURSE_NAME LIKE '%Maker Space%')";
+                        sql += " AND sg.storecode IN ('Q1') AND SG.SCHOOLSDCID = 5 AND S.STUDENT_NUMBER =" + stnumb[a] + "";
+
+
+                        OracleCommand cmdV3 = new OracleCommand(sql, con);
+                        cmdV3.ExecuteNonQuery();
+
+                        //EXPLORATORY CONDUCT
+                        sql = "CREATE OR REPLACE VIEW MS_PRO_EXP_CON";
+                        sql += " AS SELECT S.ID AS STID,SEC.ID AS SECID,S.STUDENT_NUMBER,s.Last_Name,s.First_name,C.COURSE_NAME,SG.STANDARDGRADE AS COND  FROM standardgradesection sg";
+                        sql += " LEFT JOIN STANDARD D ON sg.standardid=D.standardid";
+                        sql += " LEFT JOIN SECTIONS SEC ON SG.SECTIONSDCID=SEC.dcid";
+                        sql += " LEFT JOIN COURSES C ON SEC.COURSE_NUMBER=C.COURSE_NUMBER";
+                        sql += " LEFT JOIN TEACHERS T ON SEC.TEACHER=T.id";
+                        sql += " LEFT JOIN STUDENTS s ON sg.studentsdcid=s.dcid";
+                        sql += " WHERE D.identifier LIKE '%CON%'  AND sg.yearid=28 AND ( C.COURSE_NAME LIKE '%Explora%' OR C.COURSE_NAME LIKE '%Boot%' OR C.COURSE_NAME LIKE '%Maker Space%')";
+                        sql += " AND sg.storecode IN ('Q1') AND SG.SCHOOLSDCID=5 AND S.STUDENT_NUMBER=" + stnumb[a] + "";
+
+
+                        OracleCommand cmdV4 = new OracleCommand(sql, con);
+                        cmdV4.ExecuteNonQuery();
+
+                        //EXPLORATORY GRADES
+                        sql = "WITH main_query AS(";
+                        sql += " SELECT S.STUDENT_NUMBER, T.FIRST_NAME||' '||T.LAST_NAME AS TEACHER, sg.storecode, C.COURSE_NAME, SG.STANDARDGRADE AS EXPLO,";
+                        sql += " R.RES, CN.COND, CO.CURRENTABSENCES, CO.CURRENTTARDIES, TO_CHAR(PG.COMMENT_VALUE) AS COMMENTS FROM standardgradesection sg";
+                        sql += " LEFT JOIN STANDARD D ON sg.standardid = D.standardid";
+                        sql += " LEFT JOIN SECTIONS SEC ON SG.SECTIONSDCID = SEC.dcid";
+                        sql += " LEFT JOIN COURSES C ON SEC.COURSE_NUMBER = C.COURSE_NUMBER";
+                        sql += " LEFT JOIN TEACHERS T ON SEC.TEACHER = T.id";
+                        sql += " LEFT JOIN STUDENTS s ON sg.studentsdcid = s.dcid";
+                        sql += " LEFT JOIN MS_PRO_EXP_RES R ON S.ID = R.STID AND SEC.ID = R.SECID";
+                        sql += " LEFT JOIN MS_PRO_EXP_CON CN ON S.ID = CN.STID AND SEC.ID = CN.SECID";
+                        sql += " LEFT JOIN CC CO ON S.ID = CO.STUDENTID AND SEC.ID = CO.SECTIONID";
+                        sql += " LEFT JOIN PGFINALGRADES PG ON S.ID = PG.STUDENTID AND SEC.ID = PG.SECTIONID AND FINALGRADENAME='Q1'";
+                        sql += " WHERE D.identifier LIKE '%EXP.%' AND sg.yearid = 28 AND sg.storecode IN ('Q1') AND SG.SCHOOLSDCID = 5 AND S.STUDENT_NUMBER =" + stnumb[a] + "";
+                        sql += " )";
+                        sql += " SELECT DISTINCT COURSE_NAME,TEACHER";
+                        sql += " ,(SELECT  y.EXPLO FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.storecode = 'Q1') Engagement";
+                        sql += " ,(SELECT  y.RES FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.storecode = 'Q1') RESP";
+                        sql += " ,(SELECT  y.COND FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.storecode = 'Q1') CONDT";
+                        sql += " ,(SELECT  y.CURRENTABSENCES FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.storecode = 'Q1') ABS1";
+                        sql += " ,(SELECT  y.CURRENTTARDIES FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.storecode = 'Q1') TARDI";
+                        sql += " ,(SELECT  y.COMMENTS FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.storecode = 'Q1') Comments";
+                        sql += " FROM main_query M";
+                        sql += " ORDER BY COURSE_NAME";
+
+                        OracleCommand cmd4 = new OracleCommand(sql, con);
+                        OracleDataReader odr4 = cmd4.ExecuteReader();
+                        while (odr4.Read())
+                        {
+                            EXPDATA += odr4["COURSE_NAME"].ToString() + '|';
+                            EXPDATA += odr4["TEACHER"].ToString() + '|';
+                            EXPDATA += odr4["Engagement"].ToString() + '|';
+                            EXPDATA += odr4["RESP"].ToString() + '|';
+                            EXPDATA += odr4["CONDT"].ToString() + '|';
+                            EXPDATA += odr4["ABS1"].ToString() + '|';
+                            EXPDATA += odr4["TARDI"].ToString() + '|';
+                            EXPDATA += odr4["Comments"].ToString() + '^';
+
+                        }
+
+
+                        if (Q1DATA != "")
+                        {
+
+
+                            var stTable = Q1DATA.Split('^');
+                            var stAdv = Q1AD.Split('|');
+                            var expTable = EXPDATA.Split('^');
+
+                            iTextSharp.text.Image Imagen = iTextSharp.text.Image.GetInstance(HttpContext.Current.Server.MapPath("~/img/WLOGO.jpg"));
+                            // Imagen.SetAbsolutePosition(-3, 520);
+                            Imagen.ScalePercent(2.5f);
+
+
+                            PdfPTable HeadT = new PdfPTable(8);
+                            HeadT.HorizontalAlignment = Element.ALIGN_CENTER;
+                            HeadT.WidthPercentage = 100;
+
+                            PdfPCell logo = new PdfPCell(Imagen);
+                            logo.Colspan = 4;
+                            logo.Border = 0;
+                            logo.HorizontalAlignment = Element.ALIGN_LEFT;
+                            logo.Rowspan = 3;
+                            logo.Padding = 3;
+                            HeadT.AddCell(logo);
+
+
+                            PdfPCell HS = new PdfPCell(new Phrase("MIDDLE SCHOOL Progress Report", new Font(Font.FontFamily.HELVETICA, 14, Font.BOLD, new BaseColor(135, 0, 27))));
+                            HS.HorizontalAlignment = Element.ALIGN_BOTTOM;
+                            HS.Colspan = 4;
+                            HS.Border = 0;
+                            HeadT.AddCell(HS);
+
+                            PdfPCell SQ1 = new PdfPCell(new Phrase("School Year 2018-19 Midsemester 1", new Font(Font.FontFamily.HELVETICA, 14, Font.BOLD, BaseColor.BLACK)));
+                            SQ1.HorizontalAlignment = Element.ALIGN_BOTTOM;
+                            SQ1.Colspan = 4;
+                            SQ1.Border = 0;
+                            HeadT.AddCell(SQ1);
+
+                            PdfPCell Pub = new PdfPCell(new Phrase("Published " + DateTime.Now.ToString("MMMM dd, yyyy"), new Font(Font.FontFamily.HELVETICA, 12, Font.ITALIC, BaseColor.BLACK)));
+                            Pub.Colspan = 4;
+                            Pub.HorizontalAlignment = Element.ALIGN_BOTTOM;
+                            Pub.Rowspan = 2;
+                            Pub.Border = 0;
+                            HeadT.AddCell(Pub);
+
+                            PdfPCell bar1 = new PdfPCell(new Phrase(" ", new Font(Font.FontFamily.HELVETICA, 10.0F, Font.BOLD, BaseColor.WHITE)));
+                            bar1.HorizontalAlignment = Element.ALIGN_LEFT;
+                            bar1.Border = 0;
+                            bar1.Colspan = 8;
+                            bar1.BackgroundColor = new BaseColor(135, 0, 27);
+                            HeadT.AddCell(bar1);
+
+                            PdfPCell stinfo = new PdfPCell(new Phrase("Student Name: " + stAdv[4], new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, BaseColor.BLACK)));
+                            stinfo.HorizontalAlignment = Element.ALIGN_LEFT;
+                            stinfo.Border = 0;
+                            stinfo.Colspan = 4;
+                            stinfo.PaddingTop = 5;
+                            HeadT.AddCell(stinfo);
+
+                            PdfPCell messag = new PdfPCell(new Phrase("This report describes progress toward grade level learning expectations, identifies successes and provides guidance for improvement.", new Font(Font.FontFamily.HELVETICA, 10, Font.NORMAL, BaseColor.BLACK)));
+                            messag.HorizontalAlignment = Element.ALIGN_LEFT;
+                            messag.Border = 0;
+                            messag.Colspan = 4;
+                            messag.Rowspan = 2;
+                            HeadT.AddCell(messag);
+
+                            PdfPCell grade = new PdfPCell(new Phrase("Grade: " + stAdv[5], new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, BaseColor.BLACK)));
+                            grade.HorizontalAlignment = Element.ALIGN_LEFT;
+                            grade.Border = 0;
+                            grade.Colspan = 2;
+                            HeadT.AddCell(grade);
+                            PdfPCell stid = new PdfPCell(new Phrase("StudentID: " + stAdv[3], new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, BaseColor.WHITE)));
+                            stid.HorizontalAlignment = Element.ALIGN_LEFT;
+                            stid.Border = 0;
+                            stid.Colspan = 2;
+                            stid.PaddingBottom = 5;
+                            HeadT.AddCell(stid);
+
+                            PdfPCell boh = new PdfPCell(new Phrase("Advisory: " + stAdv[1] + " (R:" + stAdv[2] + ")", new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, BaseColor.BLACK)));
+                            boh.HorizontalAlignment = Element.ALIGN_LEFT;
+                            boh.Border = 0;
+                            boh.Colspan = 4;
+                            HeadT.AddCell(boh);
+
+                            PdfPCell legdS = new PdfPCell(new Phrase("S = Subject Area Skills       A = Absences" + Environment.NewLine + "R = Responsibility               T = Tardies" + Environment.NewLine + "C = Conduct  P=Period              U = Understanding", new Font(Font.FontFamily.HELVETICA, 9, Font.NORMAL, BaseColor.BLACK)));
+                            legdS.HorizontalAlignment = Element.ALIGN_LEFT;
+                            legdS.Border = 0;
+                            legdS.Colspan = 3;
+                            legdS.Rowspan = 2;
+                            legdS.PaddingBottom = 10;
+                            HeadT.AddCell(legdS);
+
+                            PdfPCell LINK = new PdfPCell();
+                            var c = new Chunk("Standards Score" + Environment.NewLine + "Assessment Key", new Font(Font.FontFamily.HELVETICA, 9, Font.UNDERLINE, BaseColor.BLUE));
+                            c.SetAnchor("http://bit.ly/MSStdAssessKey");
+                            LINK.AddElement(c);
+                            LINK.Border = 0;
+                            LINK.Rowspan = 2;
+                            HeadT.AddCell(LINK);
+
+
+
+                            PdfPTable GradeTable = new PdfPTable(18);
+                            GradeTable.HorizontalAlignment = Element.ALIGN_CENTER;
+                            GradeTable.WidthPercentage = 100;
+
+                            PdfPCell Course = new PdfPCell(new Phrase("Course", new Font(Font.FontFamily.HELVETICA, 12.0F, Font.BOLD, BaseColor.WHITE)));
+                            Course.HorizontalAlignment = Element.ALIGN_LEFT;
+
+                            Course.BackgroundColor = new BaseColor(135, 0, 27);
+                            Course.BorderWidth = 1F;
+                            Course.Colspan = 7;
+                            Course.PaddingBottom = 5;
+                            GradeTable.AddCell(Course);
+                            PdfPCell Teacher = new PdfPCell(new Phrase("Teacher", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                            Teacher.HorizontalAlignment = Element.ALIGN_LEFT;
+
+                            Teacher.BackgroundColor = new BaseColor(135, 0, 27);
+                            Teacher.BorderWidth = 1F;
+                            Teacher.Colspan = 5;
+                            Teacher.PaddingBottom = 5;
+                            GradeTable.AddCell(Teacher);
+                            PdfPCell Q1 = new PdfPCell(new Phrase("S", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                            Q1.HorizontalAlignment = Element.ALIGN_CENTER;
+                            Q1.BackgroundColor = new BaseColor(135, 0, 27);
+                            Q1.BorderWidth = 1F;
+                            Q1.PaddingBottom = 5;
+                            Q1.Colspan = 2;
+                            GradeTable.AddCell(Q1);
+                            PdfPCell Res = new PdfPCell(new Phrase("R", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                            Res.HorizontalAlignment = Element.ALIGN_CENTER;
+                            Res.BackgroundColor = new BaseColor(135, 0, 27);
+                            Res.BorderWidth = 1F;
+                            Res.PaddingBottom = 5;
+                            GradeTable.AddCell(Res);
+                            PdfPCell Cond = new PdfPCell(new Phrase("C", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                            Cond.HorizontalAlignment = Element.ALIGN_CENTER;
+                            Cond.BackgroundColor = new BaseColor(135, 0, 27);
+                            Cond.BorderWidth = 1F;
+                            Cond.PaddingBottom = 5;
+                            GradeTable.AddCell(Cond);
+                            PdfPCell ABS = new PdfPCell(new Phrase("A/T", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                            ABS.HorizontalAlignment = Element.ALIGN_CENTER;
+                            ABS.BackgroundColor = new BaseColor(135, 0, 27);
+                            ABS.BorderWidth = 1F;
+                            ABS.Colspan = 2;
+                            ABS.PaddingBottom = 5;
+                            GradeTable.AddCell(ABS);
+
+
+
+                            PdfPCell CO;
+                            PdfPCell TE;
+                            PdfPCell QU1;
+                            PdfPCell COM1;
+                            PdfPCell ABS1;
+                            PdfPCell R1;
+                            PdfPCell Co1;
+
+                            for (int i = 0; i < stTable.Length - 1; i++)
+                            {
+                                var nfila = stTable[i].Split('|');
+
+                                CO = new PdfPCell(new Phrase(nfila[0], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                                CO.HorizontalAlignment = Element.ALIGN_LEFT;
+                                CO.BorderWidth = 0.5F;
+                                CO.Colspan = 7;
+                                CO.PaddingBottom = 3;
+                                CO.BackgroundColor = new BaseColor(235, 235, 235);
+                                CO.BorderColor = BaseColor.GRAY;
+                                GradeTable.AddCell(CO);
+
+                                TE = new PdfPCell(new Phrase(nfila[1], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                                TE.HorizontalAlignment = Element.ALIGN_LEFT;
+                                TE.BorderWidth = 0.5F;
+                                TE.Colspan = 5;
+                                TE.PaddingBottom = 3;
+                                TE.BackgroundColor = new BaseColor(235, 235, 235);
+                                TE.BorderColor = BaseColor.GRAY;
+                                GradeTable.AddCell(TE);
+
+                                QU1 = new PdfPCell(new Phrase(nfila[2], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                                QU1.HorizontalAlignment = Element.ALIGN_CENTER;
+                                QU1.BorderWidth = 0.5F;
+                                QU1.Colspan = 2;
+                                QU1.PaddingBottom = 3;
+                                QU1.BackgroundColor = new BaseColor(235, 235, 235);
+                                QU1.BorderColor = BaseColor.GRAY;
+                                GradeTable.AddCell(QU1);
+
+                                R1 = new PdfPCell(new Phrase(nfila[3], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                                R1.HorizontalAlignment = Element.ALIGN_CENTER;
+                                R1.BorderWidth = 0.5F;
+                                R1.PaddingBottom = 3;
+                                R1.BackgroundColor = new BaseColor(235, 235, 235);
+                                R1.BorderColor = BaseColor.GRAY;
+                                GradeTable.AddCell(R1);
+
+                                Co1 = new PdfPCell(new Phrase(nfila[4], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                                Co1.HorizontalAlignment = Element.ALIGN_CENTER;
+                                Co1.BorderWidth = 0.5F;
+                                Co1.PaddingBottom = 3;
+                                Co1.BackgroundColor = new BaseColor(235, 235, 235);
+                                Co1.BorderColor = BaseColor.GRAY;
+                                GradeTable.AddCell(Co1);
+
+                                ABS1 = new PdfPCell(new Phrase(nfila[5] + '/' + nfila[6], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                                ABS1.HorizontalAlignment = Element.ALIGN_CENTER;
+                                ABS1.BorderWidth = 0.5F;
+                                ABS1.Colspan = 2;
+                                ABS1.PaddingBottom = 3;
+                                ABS1.BackgroundColor = new BaseColor(235, 235, 235);
+                                ABS1.BorderColor = BaseColor.GRAY;
+                                GradeTable.AddCell(ABS1);
+
+                                COM1 = new PdfPCell(new Phrase(nfila[7], new Font(Font.FontFamily.HELVETICA, 10F, Font.NORMAL, BaseColor.BLACK)));
+                                COM1.HorizontalAlignment = Element.ALIGN_LEFT;
+                                COM1.BorderWidth = 0;
+                                COM1.Colspan = 18;
+                                COM1.PaddingBottom = 15;
+                                //COM1.BorderColor = BaseColor.LIGHT_GRAY;
+                                GradeTable.AddCell(COM1);
+
+                            }
+
+                            PdfPTable ExpTable = new PdfPTable(18);
+                            ExpTable.HorizontalAlignment = Element.ALIGN_CENTER;
+                            ExpTable.WidthPercentage = 100;
+
+                            Paragraph spacio = new Paragraph(" ");
+
+                            PdfPCell expCourse = new PdfPCell(new Phrase("Exploratory", new Font(Font.FontFamily.HELVETICA, 12.0F, Font.BOLD, BaseColor.WHITE)));
+                            expCourse.HorizontalAlignment = Element.ALIGN_LEFT;
+                            expCourse.BackgroundColor = new BaseColor(135, 0, 27);
+                            expCourse.BorderWidth = 1F;
+                            expCourse.Colspan = 7;
+                            expCourse.PaddingBottom = 5;
+                            ExpTable.AddCell(expCourse);
+                            PdfPCell expTeacher = new PdfPCell(new Phrase("Teacher", new Font(Font.FontFamily.HELVETICA, 12.0F, Font.BOLD, BaseColor.WHITE)));
+                            expTeacher.HorizontalAlignment = Element.ALIGN_LEFT;
+                            expTeacher.BackgroundColor = new BaseColor(135, 0, 27);
+                            expTeacher.BorderWidth = 1F;
+                            expTeacher.Colspan = 5;
+                            expTeacher.PaddingBottom = 5;
+                            ExpTable.AddCell(expTeacher);
+                            PdfPCell expEng = new PdfPCell(new Phrase("U", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                            expEng.HorizontalAlignment = Element.ALIGN_CENTER;
+                            expEng.BackgroundColor = new BaseColor(135, 0, 27);
+                            expEng.BorderWidth = 1F;
+                            expEng.Colspan = 2;
+                            expEng.PaddingBottom = 5;
+                            ExpTable.AddCell(expEng);
+                            PdfPCell expRes = new PdfPCell(new Phrase("R", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                            expRes.HorizontalAlignment = Element.ALIGN_CENTER;
+                            expRes.BackgroundColor = new BaseColor(135, 0, 27);
+                            expRes.BorderWidth = 1F;
+                            expRes.PaddingBottom = 5;
+                            ExpTable.AddCell(expRes);
+                            PdfPCell expCond = new PdfPCell(new Phrase("C", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                            expCond.HorizontalAlignment = Element.ALIGN_CENTER;
+                            expCond.BackgroundColor = new BaseColor(135, 0, 27);
+                            expCond.BorderWidth = 1F;
+                            expCond.PaddingBottom = 5;
+                            ExpTable.AddCell(expCond);
+                            PdfPCell expABS = new PdfPCell(new Phrase("A/T", new Font(Font.FontFamily.HELVETICA, 12.0F, Font.BOLD, BaseColor.WHITE)));
+                            expABS.HorizontalAlignment = Element.ALIGN_CENTER;
+                            expABS.BackgroundColor = new BaseColor(135, 0, 27);
+                            expABS.BorderWidth = 1F;
+                            expABS.Colspan = 2;
+                            expABS.PaddingBottom = 5;
+                            ExpTable.AddCell(expABS);
+
+                            PdfPCell expCO;
+                            PdfPCell expTE;
+                            PdfPCell expQU1;
+                            PdfPCell expCOM1;
+                            PdfPCell expABS1;
+                            PdfPCell expR1;
+                            PdfPCell expCo1;
+
+                            for (int i = 0; i < expTable.Length - 1; i++)
+                            {
+                                var nfila = expTable[i].Split('|');
+
+                                expCO = new PdfPCell(new Phrase(nfila[0], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                                expCO.HorizontalAlignment = Element.ALIGN_LEFT;
+                                expCO.BorderWidth = 0.5F;
+                                expCO.Colspan = 7;
+                                expCO.Padding = 5;
+                                expCO.BackgroundColor = new BaseColor(235, 235, 235);
+                                expCO.BorderColor = BaseColor.GRAY;
+                                ExpTable.AddCell(expCO);
+
+                                expTE = new PdfPCell(new Phrase(nfila[1], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                                expTE.HorizontalAlignment = Element.ALIGN_LEFT;
+                                expTE.BorderWidth = 0.5F;
+                                expTE.Colspan = 5;
+                                expTE.PaddingTop = 5;
+                                expTE.BackgroundColor = new BaseColor(235, 235, 235);
+                                expTE.BorderColor = BaseColor.GRAY;
+                                ExpTable.AddCell(expTE);
+
+                                expQU1 = new PdfPCell(new Phrase(nfila[2], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                                expQU1.HorizontalAlignment = Element.ALIGN_CENTER;
+                                expQU1.BorderWidth = 0.5F;
+                                expQU1.Colspan = 2;
+                                expQU1.PaddingTop = 5;
+                                expQU1.BackgroundColor = new BaseColor(235, 235, 235);
+                                expQU1.BorderColor = BaseColor.GRAY;
+                                ExpTable.AddCell(expQU1);
+
+                                expR1 = new PdfPCell(new Phrase(nfila[3], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                                expR1.HorizontalAlignment = Element.ALIGN_CENTER;
+                                expR1.BorderWidth = 0.5F;
+                                expR1.PaddingTop = 5;
+                                expR1.BackgroundColor = new BaseColor(235, 235, 235);
+                                expR1.BorderColor = BaseColor.GRAY;
+                                ExpTable.AddCell(expR1);
+
+                                expCo1 = new PdfPCell(new Phrase(nfila[4], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                                expCo1.HorizontalAlignment = Element.ALIGN_CENTER;
+                                expCo1.BorderWidth = 0.5F;
+                                expCo1.PaddingTop = 5;
+                                expCo1.BackgroundColor = new BaseColor(235, 235, 235);
+                                expCo1.BorderColor = BaseColor.GRAY;
+                                ExpTable.AddCell(expCo1);
+
+                                expABS1 = new PdfPCell(new Phrase(nfila[5] + '/' + nfila[6], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                                expABS1.HorizontalAlignment = Element.ALIGN_CENTER;
+                                expABS1.BorderWidth = 0.5F;
+                                expABS1.Colspan = 2;
+                                expABS1.PaddingTop = 5;
+                                expABS1.BackgroundColor = new BaseColor(235, 235, 235);
+                                expABS1.BorderColor = BaseColor.GRAY;
+                                ExpTable.AddCell(expABS1);
+
+                                expCOM1 = new PdfPCell(new Phrase(nfila[7], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                                expCOM1.HorizontalAlignment = Element.ALIGN_LEFT;
+                                expCOM1.BorderWidth = 0;
+                                expCOM1.Colspan = 18;
+                                expCOM1.PaddingBottom = 15;
+                                //expCOM1.BorderColor = BaseColor.LIGHT_GRAY;
+                                ExpTable.AddCell(expCOM1);
+
+
+                            }
+
+
+                            //documento.Add(stfoto);
+                            documento.Add(HeadT);
+                            documento.Add(GradeTable);
+                            documento.Add(spacio);
+                            documento.Add(ExpTable);
+
+                            //Process prc = new System.Diagnostics.Process();
+                            //prc.StartInfo.FileName = fileName;
+                            //prc.Start();
+                        }
+                        else
+                        {
+                            con.Close();
+
+                        }
+                        documento.NewPage();
+                    }
+
+                    con.Close();
+
+                }
+                else
+                {
+                    if (con.State == ConnectionState.Closed)
+                    {
+                        con.Open();
+                    }
+                    fname = "MS_ProgressReport_" + DateTime.Now.DayOfYear + DateTime.Now.Month + DateTime.Now.Day + DateTime.Now.Millisecond + ".pdf";
+                    fileName = HttpContext.Current.Server.MapPath("~/RepoFiles/" + fname);
+                    PdfWriter.GetInstance(documento, new FileStream(fileName, FileMode.Create));
+                    documento.Open();
+
+                    string Q1DATA = string.Empty;
+                    string Q1AD = string.Empty;
+                    string EXPDATA = string.Empty;
+                    if (con.State == ConnectionState.Closed)
+                    {
+                        con.Open();
+                    }
+
+                    //CREATE OR MODIFY VIEWS
+                    sql = "CREATE OR REPLACE VIEW MS_REP_CARD_RES";
+                    sql += " AS SELECT S.ID,SEC.ID AS SECTID,s.First_name,C.COURSE_NAME,SG.STANDARDGRADE AS RES,T.LASTFIRST,SG.STORECODE RSSTDE";
+                    sql += " FROM standardgradesection sg";
+                    sql += " LEFT JOIN STANDARD D ON sg.standardid = D.standardid";
+                    sql += " LEFT JOIN STANDARD Di ON sg.standardid = Di.standardid";
+                    sql += " LEFT JOIN SECTIONS SEC ON SG.SECTIONSDCID = SEC.dcid";
+                    sql += " LEFT JOIN COURSES C ON SEC.COURSE_NUMBER = C.COURSE_NUMBER";
+                    sql += " LEFT JOIN TEACHERS T ON SEC.TEACHER = T.id";
+                    sql += " LEFT JOIN STUDENTS s ON sg.studentsdcid = s.dcid";
+                    sql += " WHERE D.identifier LIKE '%RES%' AND C.COURSE_NAME NOT LIKE '%Explora%' AND C.COURSE_NAME NOT LIKE '%Space%'";
+                    sql += " AND sg.yearid = 28 AND s.enroll_status = 0";
+                    sql += " AND sg.storecode IN ('Q1', 'Q2', 'S1') AND SG.SCHOOLSDCID = 5 AND S.STUDENT_NUMBER = " + stnum + "";
+                    sql += " ORDER BY C.COURSE_NAME";
+                                        
+                    OracleCommand cmdV1 = new OracleCommand(sql, con);
+                    cmdV1.ExecuteNonQuery();
+
+                    //CONDUCT.
+                    sql = "CREATE OR REPLACE VIEW MS_REP_CARD_CON";
+                    sql += " AS SELECT d.identifier,S.ID,SEC.ID AS SECID,C.COURSE_NAME,SG.STANDARDGRADE AS COND,T.LASTFIRST,SG.STORECODE CDSTDE  FROM standardgradesection sg";
+                    sql += " LEFT JOIN STANDARD D ON sg.standardid = D.standardid";
+                    sql += " LEFT JOIN SECTIONS SEC ON SG.SECTIONSDCID = SEC.dcid";
+                    sql += " LEFT JOIN COURSES C ON SEC.COURSE_NUMBER = C.COURSE_NUMBER";
+                    sql += " LEFT JOIN TEACHERS T ON SEC.TEACHER = T.id";
+                    sql += " LEFT JOIN STUDENTS s ON sg.studentsdcid = s.dcid";
+                    sql += " WHERE D.identifier LIKE '%CON%'  AND C.COURSE_NAME NOT LIKE '%Explora%' AND C.COURSE_NAME NOT LIKE '%Space%'";
+                    sql += " AND sg.yearid = 28 AND s.enroll_status = 0 AND sg.storecode IN ('Q1', 'Q2', 'S1') AND SG.SCHOOLSDCID = 5 AND S.STUDENT_NUMBER = " + stnum + "";
+                    sql += " ORDER BY C.COURSE_NAME";
+
+                
+                    OracleCommand cmdV2 = new OracleCommand(sql, con);
+                    cmdV2.ExecuteNonQuery();
+
+
+                    //Advisory Teacher
+                    sql = "WITH ADV AS(SELECT S.STUDENT_NUMBER, S.FIRST_NAME || ' ' || S.LAST_NAME STUDENT,S.GRADE_LEVEL, R.COURSE_NAME, T.FIRST_NAME || ' ' || T.LAST_NAME TEACHER, R.RES, TO_CHAR(PG.COMMENT_VALUE) AS COMMENTS, R.RSSTDE, PG.FINALGRADENAME, CO.CURRENTABSENCES AB, CO.CURRENTTARDIES TA FROM CC CO";
+                    sql += " LEFT JOIN STUDENTS S ON CO.STUDENTID = S.ID";
+                    sql += " LEFT JOIN TEACHERS T ON CO.TEACHERID = T.ID";
+                    sql += " LEFT JOIN MS_REP_CARD_RES R ON CO.STUDENTID = R.ID AND CO.SECTIONID = R.SECTID";
+                    sql += " LEFT JOIN PGFINALGRADES PG ON CO.STUDENTID = pg.studentid and co.sectionid = pg.sectionid AND PG.FINALGRADENAME IN R.RSSTDE";
+                    sql += " WHERE CO.TERMID IN(2800, 2801, 2802) AND R.COURSE_NAME LIKE '%Advisory%' AND R.RSSTDE IN('Q1', 'Q2') AND S.STUDENT_NUMBER = " + stnum + "";
+                    sql += " )";
+                    sql += " SELECT DISTINCT STUDENT_NUMBER,STUDENT,GRADE_LEVEL,COURSE_NAME,TEACHER";
+                    sql += " ,(SELECT  y.RES FROM ADV y WHERE y.COURSE_NAME = A.COURSE_NAME AND y.RSSTDE = 'Q1' ) Q1RES";
+                    sql += " ,(SELECT  y.RES FROM ADV y WHERE y.COURSE_NAME = A.COURSE_NAME AND y.RSSTDE = 'Q2' ) Q2RES";
+                    sql += " ,(SELECT  y.AB FROM ADV y WHERE y.COURSE_NAME = A.COURSE_NAME AND y.RSSTDE = 'Q2' ) || '/' ||";
+                    sql += " (SELECT  y.TA FROM ADV y WHERE y.COURSE_NAME = A.COURSE_NAME AND y.RSSTDE = 'Q2' ) AT";
+                    sql += " ,(SELECT  y.COMMENTS FROM ADV y WHERE y.COURSE_NAME = A.COURSE_NAME AND y.RSSTDE = 'Q1')QCOMMENT";
+                    sql += " FROM ADV A";
+
+                 
+                    OracleCommand cmd = new OracleCommand(sql, con);
+                    OracleDataReader odr = cmd.ExecuteReader();
+                    while (odr.Read())
+                    {
+                        Q1AD += odr["STUDENT_NUMBER"].ToString() + '|';
+                        Q1AD += odr["STUDENT"].ToString() + '|';
+                        Q1AD += odr["GRADE_LEVEL"].ToString() + '|';
+                        Q1AD += odr["COURSE_NAME"].ToString() + '|';
+                        Q1AD += odr["TEACHER"].ToString() + '|';
+                        Q1AD += odr["Q1RES"].ToString() + '|';
+                        Q1AD += odr["Q2RES"].ToString() + '|';
+                        Q1AD += odr["AT"].ToString() + '|';
+                        Q1AD += odr["QCOMMENT"].ToString() + '|';
+
+                    }
+
+
+                    //GRADES VALUES
+                    sql = "SELECT COURSE_NAME, TEACHER, Q1S|| '/' || Q1R || '/' || Q1C || '/' || Q1A || '/' || Q1T Q1, Q2S || '/' || Q2R || '/' || Q2C || '/' || Q2A || '/' || Q2T || '/' || COMMENTS Q2 FROM (";
+                    sql += " WITH main_query AS(SELECT C.COURSE_NAME, T.LASTFIRST TEACHER, PG.FINALGRADENAME, PG.GRADE, R.RES, CN.COND,";
+                    sql += " TO_CHAR(PG.COMMENT_VALUE) AS COMMENTS, CO.CURRENTABSENCES, CO.CURRENTTARDIES, R.RSSTDE, CN.CDSTDE FROM CC CO";
+                    sql += " LEFT JOIN STUDENTS S ON CO.STUDENTID = S.ID";
+                    sql += " LEFT JOIN COURSES C ON CO.COURSE_NUMBER = C.COURSE_NUMBER";
+                    sql += " LEFT JOIN TEACHERS T ON CO.TEACHERID = T.ID";
+                    sql += " LEFT JOIN MS_REP_CARD_RES R ON CO.STUDENTID = R.ID AND CO.SECTIONID = R.SECTID AND R.RSSTDE IN('Q1', 'Q2')";
+                    sql += " LEFT JOIN MS_REP_CARD_CON CN ON CO.STUDENTID = CN.ID AND CO.SECTIONID = CN.SECID AND CN.CDSTDE IN('Q1', 'Q2')";
+                    sql += " LEFT JOIN PGFINALGRADES PG ON s.id = pg.studentid and co.sectionid = pg.sectionid and pg.finalgradename = r.RSSTDE";
+                    sql += " WHERE CO.TERMID IN(2800, 2801, 2802) AND  C.COURSE_NAME NOT LIKE '%Explora%' AND C.COURSE_NAME NOT LIKE '%Space%' AND C.COURSE_NAME NOT LIKE '%Advisory%'";
+                    sql += " AND CO.origsectionid = 0  AND S.STUDENT_NUMBER = " + stnum + "";
+                    sql += " )";
+                    sql += " SELECT DISTINCT COURSE_NAME, TEACHER";
+                    sql += " , (SELECT  y.GRADE FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.FINALGRADENAME = 'Q1' AND Y.RSSTDE = 'Q1' AND Y.CDSTDE = 'Q1') Q1S";
+                    sql += " ,(SELECT  y.RES FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME   AND y.FINALGRADENAME = 'Q1' AND Y.RSSTDE = 'Q1' AND Y.CDSTDE = 'Q1' ) Q1R";
+                    sql += " ,(SELECT  y.COND FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME  AND y.FINALGRADENAME = 'Q1' AND Y.RSSTDE = 'Q1' AND Y.CDSTDE = 'Q1') Q1C";
+                    sql += " ,(SELECT  y.CURRENTABSENCES FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.FINALGRADENAME = 'Q1' AND Y.RSSTDE = 'Q1' AND Y.CDSTDE = 'Q1') Q1A";
+                    sql += " ,(SELECT  y.CURRENTTARDIES FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.FINALGRADENAME = 'Q1' AND Y.RSSTDE = 'Q1' AND Y.CDSTDE = 'Q1') Q1T";
+                    sql += " ,(SELECT  y.GRADE FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.FINALGRADENAME = 'Q2' AND Y.RSSTDE = 'Q2' AND Y.CDSTDE = 'Q2') Q2S";
+                    sql += " ,(SELECT  y.RES FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME  and Y.FINALGRADENAME = 'Q2' AND Y.RSSTDE = 'Q2' AND Y.CDSTDE = 'Q2') Q2R";
+                    sql += " ,(SELECT  y.COND FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and Y.FINALGRADENAME = 'Q2'  AND Y.RSSTDE = 'Q2' AND Y.CDSTDE = 'Q2') Q2C";
+                    sql += " ,(SELECT  y.CURRENTABSENCES FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.FINALGRADENAME = 'Q2' AND Y.RSSTDE = 'Q2' AND Y.CDSTDE = 'Q2') Q2A";
+                    sql += " ,(SELECT  y.CURRENTTARDIES FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.FINALGRADENAME = 'Q2' AND Y.RSSTDE = 'Q2' AND Y.CDSTDE = 'Q2') Q2T";
+                    sql += " ,(SELECT  y.COMMENTS FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.FINALGRADENAME = 'Q2' AND Y.RSSTDE = 'Q2' AND Y.CDSTDE = 'Q2') Comments";
+                    sql += " FROM main_query M";
+                    sql += " ORDER BY COURSE_NAME)";
+
+                    OracleCommand cmd1 = new OracleCommand(sql, con);
+                    OracleDataReader odr1 = cmd1.ExecuteReader();
+                    while (odr1.Read())
+                    {
+                        Q1DATA += odr1["COURSE_NAME"].ToString() + '|';
+                        Q1DATA += odr1["TEACHER"].ToString() + '|';
+                        Q1DATA += odr1["Q1"].ToString() + '|';
+                        Q1DATA += odr1["Q2"].ToString() + '^';
+                    }
+
+                    //EXPLORATORY RES.
+                    sql = "CREATE OR REPLACE VIEW MS_PRO_EXP_RES";
+                    sql += " AS SELECT S.ID AS STID,SEC.ID AS SECID,S.STUDENT_NUMBER,s.Last_Name,s.First_name,C.COURSE_NAME,SG.STANDARDGRADE AS RES FROM standardgradesection sg";
+                    sql += " LEFT JOIN STANDARD D ON sg.standardid = D.standardid";
+                    sql += " LEFT JOIN SECTIONS SEC ON SG.SECTIONSDCID = SEC.dcid";
+                    sql += " LEFT JOIN COURSES C ON SEC.COURSE_NUMBER = C.COURSE_NUMBER";
+                    sql += " LEFT JOIN TEACHERS T ON SEC.TEACHER = T.id";
+                    sql += " LEFT JOIN STUDENTS s ON sg.studentsdcid = s.dcid";
+                    sql += " WHERE D.identifier LIKE '%RES%' AND sg.yearid = 28 AND";
+                    sql += " (C.COURSE_NAME LIKE '%Explora%' OR C.COURSE_NAME LIKE '%Boot%' OR C.COURSE_NAME LIKE '%Maker Space%')";
+                    sql += " AND sg.storecode IN ('Q1') AND SG.SCHOOLSDCID = 5 AND S.STUDENT_NUMBER =" + stnum + "";
+
+
+                    OracleCommand cmdV3 = new OracleCommand(sql, con);
+                    cmdV3.ExecuteNonQuery();
+
+                    //EXPLORATORY CONDUCT
+                    sql = "CREATE OR REPLACE VIEW MS_PRO_EXP_CON";
+                    sql += " AS SELECT S.ID AS STID,SEC.ID AS SECID,S.STUDENT_NUMBER,s.Last_Name,s.First_name,C.COURSE_NAME,SG.STANDARDGRADE AS COND  FROM standardgradesection sg";
+                    sql += " LEFT JOIN STANDARD D ON sg.standardid=D.standardid";
+                    sql += " LEFT JOIN SECTIONS SEC ON SG.SECTIONSDCID=SEC.dcid";
+                    sql += " LEFT JOIN COURSES C ON SEC.COURSE_NUMBER=C.COURSE_NUMBER";
+                    sql += " LEFT JOIN TEACHERS T ON SEC.TEACHER=T.id";
+                    sql += " LEFT JOIN STUDENTS s ON sg.studentsdcid=s.dcid";
+                    sql += " WHERE D.identifier LIKE '%CON%'  AND sg.yearid=28 AND ( C.COURSE_NAME LIKE '%Explora%' OR C.COURSE_NAME LIKE '%Boot%' OR C.COURSE_NAME LIKE '%Maker Space%')";
+                    sql += " AND sg.storecode IN ('Q1') AND SG.SCHOOLSDCID=5 AND S.STUDENT_NUMBER=" + stnum + "";
+
+
+                    OracleCommand cmdV4 = new OracleCommand(sql, con);
+                    cmdV4.ExecuteNonQuery();
+
+                    //EXPLORATORY GRADES
+                    sql = "WITH main_query AS(";
+                    sql += " SELECT S.STUDENT_NUMBER, T.FIRST_NAME||' '||T.LAST_NAME AS TEACHER, sg.storecode, C.COURSE_NAME, SG.STANDARDGRADE AS EXPLO,";
+                    sql += " R.RES, CN.COND, CO.CURRENTABSENCES, CO.CURRENTTARDIES, TO_CHAR(PG.COMMENT_VALUE) AS COMMENTS FROM standardgradesection sg";
+                    sql += " LEFT JOIN STANDARD D ON sg.standardid = D.standardid";
+                    sql += " LEFT JOIN SECTIONS SEC ON SG.SECTIONSDCID = SEC.dcid";
+                    sql += " LEFT JOIN COURSES C ON SEC.COURSE_NUMBER = C.COURSE_NUMBER";
+                    sql += " LEFT JOIN TEACHERS T ON SEC.TEACHER = T.id";
+                    sql += " LEFT JOIN STUDENTS s ON sg.studentsdcid = s.dcid";
+                    sql += " LEFT JOIN MS_PRO_EXP_RES R ON S.ID = R.STID AND SEC.ID = R.SECID";
+                    sql += " LEFT JOIN MS_PRO_EXP_CON CN ON S.ID = CN.STID AND SEC.ID = CN.SECID";
+                    sql += " LEFT JOIN CC CO ON S.ID = CO.STUDENTID AND SEC.ID = CO.SECTIONID";
+                    sql += " LEFT JOIN PGFINALGRADES PG ON S.ID = PG.STUDENTID AND SEC.ID = PG.SECTIONID AND FINALGRADENAME='Q1'";
+                    sql += " WHERE D.identifier LIKE '%EXP.%' AND sg.yearid = 28 AND sg.storecode IN ('Q1') AND SG.SCHOOLSDCID = 5 AND S.STUDENT_NUMBER =" + stnum + "";
+                    sql += " )";
+                    sql += " SELECT DISTINCT COURSE_NAME,TEACHER";
+                    sql += " ,(SELECT  y.EXPLO FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.storecode = 'Q1') Engagement";
+                    sql += " ,(SELECT  y.RES FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.storecode = 'Q1') RESP";
+                    sql += " ,(SELECT  y.COND FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.storecode = 'Q1') CONDT";
+                    sql += " ,(SELECT  y.CURRENTABSENCES FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.storecode = 'Q1') ABS1";
+                    sql += " ,(SELECT  y.CURRENTTARDIES FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.storecode = 'Q1') TARDI";
+                    sql += " ,(SELECT  y.COMMENTS FROM main_query y WHERE y.COURSE_NAME = M.COURSE_NAME and y.storecode = 'Q1') Comments";
+                    sql += " FROM main_query M";
+                    sql += " ORDER BY COURSE_NAME";
+
+                    OracleCommand cmd4 = new OracleCommand(sql, con);
+                    OracleDataReader odr4 = cmd4.ExecuteReader();
+                    while (odr4.Read())
+                    {
+                        EXPDATA += odr4["COURSE_NAME"].ToString() + '|';
+                        EXPDATA += odr4["TEACHER"].ToString() + '|';
+                        EXPDATA += odr4["Engagement"].ToString() + '|';
+                        EXPDATA += odr4["RESP"].ToString() + '|';
+                        EXPDATA += odr4["CONDT"].ToString() + '|';
+                        EXPDATA += odr4["ABS1"].ToString() + '|';
+                        EXPDATA += odr4["TARDI"].ToString() + '|';
+                        EXPDATA += odr4["Comments"].ToString() + '^';
+
+                    }
+
+
+                    if (Q1DATA != "")
+                    {
+
+
+                        var stTable = Q1DATA.Split('^');
+                        var stAdv = Q1AD.Split('|');
+                        var expTable = EXPDATA.Split('^');
+                        iTextSharp.text.Image Imagen = iTextSharp.text.Image.GetInstance(HttpContext.Current.Server.MapPath("~/img/WLOGO.jpg"));
+                        // Imagen.SetAbsolutePosition(-3, 520);
+                        Imagen.ScalePercent(2.5f);
+
+
+                        PdfPTable HeadT = new PdfPTable(8);
+                        HeadT.HorizontalAlignment = Element.ALIGN_CENTER;
+                        HeadT.WidthPercentage = 100;
+
+                        PdfPCell logo = new PdfPCell(Imagen);
+                        logo.Colspan = 4;
+                        logo.Border = 0;
+                        logo.HorizontalAlignment = Element.ALIGN_LEFT;
+                        logo.Rowspan = 3;
+                        logo.Padding = 3;
+                        HeadT.AddCell(logo);
+
+
+                        PdfPCell HS = new PdfPCell(new Phrase("MIDDLE SCHOOL Report Card", new Font(Font.FontFamily.HELVETICA, 14, Font.BOLD, new BaseColor(135, 0, 27))));
+                        HS.HorizontalAlignment = Element.ALIGN_BOTTOM;
+                        HS.Colspan = 4;
+                        HS.Border = 0;
+                        HeadT.AddCell(HS);
+
+                        PdfPCell SQ1 = new PdfPCell(new Phrase("School Year 2018-19 Semester", new Font(Font.FontFamily.HELVETICA, 14, Font.BOLD, BaseColor.BLACK)));
+                        SQ1.HorizontalAlignment = Element.ALIGN_BOTTOM;
+                        SQ1.Colspan = 4;
+                        SQ1.Border = 0;
+                        HeadT.AddCell(SQ1);
+
+                        PdfPCell Pub = new PdfPCell(new Phrase("Published " + DateTime.Now.ToString("MMMM dd, yyyy"), new Font(Font.FontFamily.HELVETICA, 12, Font.ITALIC, BaseColor.BLACK)));
+                        Pub.Colspan = 4;
+                        Pub.HorizontalAlignment = Element.ALIGN_BOTTOM;
+                        Pub.Rowspan = 2;
+                        Pub.Border = 0;
+                        HeadT.AddCell(Pub);
+
+                        PdfPCell bar1 = new PdfPCell(new Phrase(" ", new Font(Font.FontFamily.HELVETICA, 10.0F, Font.BOLD, BaseColor.WHITE)));
+                        bar1.HorizontalAlignment = Element.ALIGN_LEFT;
+                        bar1.Border = 0;
+                        bar1.Colspan = 8;
+                        bar1.BackgroundColor = new BaseColor(135, 0, 27);
+                        HeadT.AddCell(bar1);
+
+                        PdfPCell stinfo = new PdfPCell(new Phrase("Student Name: " + stAdv[1], new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, BaseColor.BLACK)));
+                        stinfo.HorizontalAlignment = Element.ALIGN_LEFT;
+                        stinfo.Border = 0;
+                        stinfo.Colspan = 4;
+                        stinfo.PaddingTop = 5;
+                        HeadT.AddCell(stinfo);
+
+                        PdfPCell messag = new PdfPCell(new Phrase("This report describes progress toward grade level learning expectations, identifies successes and provides guidance for improvement.", new Font(Font.FontFamily.HELVETICA, 10, Font.NORMAL, BaseColor.BLACK)));
+                        messag.HorizontalAlignment = Element.ALIGN_LEFT;
+                        messag.Border = 0;
+                        messag.Colspan = 4;
+                        messag.Rowspan = 2;
+                        HeadT.AddCell(messag);
+
+                        PdfPCell grade = new PdfPCell(new Phrase("Grade: " + stAdv[2], new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, BaseColor.BLACK)));
+                        grade.HorizontalAlignment = Element.ALIGN_LEFT;
+                        grade.Border = 0;
+                        grade.Colspan = 2;
+                        HeadT.AddCell(grade);
+                        PdfPCell stid = new PdfPCell(new Phrase("StudentID: " + stAdv[0], new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, BaseColor.WHITE)));
+                        stid.HorizontalAlignment = Element.ALIGN_LEFT;
+                        stid.Border = 0;
+                        stid.Colspan = 2;
+                        stid.PaddingBottom = 5;
+                        HeadT.AddCell(stid);
+
+                        PdfPCell boh = new PdfPCell(new Phrase(" ", new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, BaseColor.BLACK)));
+                        boh.HorizontalAlignment = Element.ALIGN_LEFT;
+                        boh.Border = 0;
+                        boh.Colspan = 4;
+                        HeadT.AddCell(boh);
+
+                        PdfPCell legdS = new PdfPCell(new Phrase("S = Subject Area Skills       A = Absences" + Environment.NewLine + "R = Responsibility               T = Tardies" + Environment.NewLine + "C = Conduct    P=Period     U = Understanding", new Font(Font.FontFamily.HELVETICA, 9, Font.NORMAL, BaseColor.BLACK)));
+                        legdS.HorizontalAlignment = Element.ALIGN_LEFT;
+                        legdS.Border = 0;
+                        legdS.Colspan = 3;
+                        legdS.Rowspan = 2;
+                        legdS.PaddingBottom = 10;
+                        HeadT.AddCell(legdS);
+
+                        PdfPCell LINK = new PdfPCell();
+                        var c = new Chunk("Standards Score" + Environment.NewLine + "Assessment Key", new Font(Font.FontFamily.HELVETICA, 9, Font.UNDERLINE, BaseColor.BLUE));
+                        c.SetAnchor("http://bit.ly/MSStdAssessKey");
+                        LINK.AddElement(c);
+                        LINK.Border = 0;
+                        LINK.Rowspan = 2;
+                        HeadT.AddCell(LINK);
+
+
+                        PdfPTable ADVTable = new PdfPTable(18);
+                        ADVTable.HorizontalAlignment = Element.ALIGN_CENTER;
+                        ADVTable.WidthPercentage = 100;
+
+                        PdfPCell ADCourse = new PdfPCell(new Phrase("Course", new Font(Font.FontFamily.HELVETICA, 12.0F, Font.BOLD, BaseColor.WHITE)));
+                        ADCourse.HorizontalAlignment = Element.ALIGN_LEFT;
+
+                        ADCourse.BackgroundColor = new BaseColor(135, 0, 27);
+                        ADCourse.BorderWidth = 1F;
+                        ADCourse.Colspan = 8;
+                        ADCourse.PaddingBottom = 5;
+                        ADVTable.AddCell(ADCourse);
+                        PdfPCell ADTeacher = new PdfPCell(new Phrase("Teacher", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                        ADTeacher.HorizontalAlignment = Element.ALIGN_LEFT;
+                        ADTeacher.BackgroundColor = new BaseColor(135, 0, 27);
+                        ADTeacher.BorderWidth = 1F;
+                        ADTeacher.Colspan = 5;
+                        ADTeacher.PaddingBottom = 5;
+                        ADVTable.AddCell(ADTeacher);
+                        PdfPCell ADQ1 = new PdfPCell(new Phrase("Q1 R", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                        ADQ1.HorizontalAlignment = Element.ALIGN_CENTER;
+                        ADQ1.BackgroundColor = new BaseColor(135, 0, 27);
+                        ADQ1.BorderWidth = 1F;
+                        ADQ1.PaddingBottom = 5;
+                        ADQ1.Colspan = 2;
+                        ADVTable.AddCell(ADQ1);
+                        PdfPCell ADRes = new PdfPCell(new Phrase("Q2 R", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                        ADRes.HorizontalAlignment = Element.ALIGN_CENTER;
+                        ADRes.BackgroundColor = new BaseColor(135, 0, 27);
+                        ADRes.BorderWidth = 1F;
+                        ADRes.PaddingBottom = 5;
+                        ADVTable.AddCell(ADRes);
+                    
+                        PdfPCell ADABS = new PdfPCell(new Phrase("A/T", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                        ADABS.HorizontalAlignment = Element.ALIGN_CENTER;
+                        ADABS.BackgroundColor = new BaseColor(135, 0, 27);
+                        ADABS.BorderWidth = 1F;
+                        ADABS.Colspan = 2;
+                        ADABS.PaddingBottom = 8;
+                        ADVTable.AddCell(ADABS);
+
+                        PdfPCell ADCO = new PdfPCell(new Phrase(stAdv[3], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                        ADCO.HorizontalAlignment = Element.ALIGN_LEFT;
+                        ADCO.BorderWidth = 0.5F;
+                        ADCO.Colspan = 8;
+                        ADCO.PaddingBottom = 3;
+                        ADCO.BackgroundColor = new BaseColor(235, 235, 235);
+                        ADCO.BorderColor = BaseColor.GRAY;
+                        ADVTable.AddCell(ADCO);
+
+                        PdfPCell ADTE = new PdfPCell(new Phrase(stAdv[4], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                        ADTE.HorizontalAlignment = Element.ALIGN_LEFT;
+                        ADTE.BorderWidth = 0.5F;
+                        ADTE.Colspan = 5;
+                        ADTE.PaddingBottom = 3;
+                        ADTE.BackgroundColor = new BaseColor(235, 235, 235);
+                        ADTE.BorderColor = BaseColor.GRAY;
+                        ADVTable.AddCell(ADTE);
+
+                        PdfPCell ADQU1 = new PdfPCell(new Phrase(stAdv[5], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                        ADQU1.HorizontalAlignment = Element.ALIGN_CENTER;
+                        ADQU1.BorderWidth = 0.5F;
+                        ADQU1.Colspan = 2;
+                        ADQU1.PaddingBottom = 3;
+                        ADQU1.BackgroundColor = new BaseColor(235, 235, 235);
+                        ADQU1.BorderColor = BaseColor.GRAY;
+                        ADVTable.AddCell(ADQU1);
+
+                        PdfPCell ADR1 = new PdfPCell(new Phrase(stAdv[6], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                        ADR1.HorizontalAlignment = Element.ALIGN_CENTER;
+                        ADR1.BorderWidth = 0.5F;
+                        ADR1.PaddingBottom = 3;
+                        ADR1.BackgroundColor = new BaseColor(235, 235, 235);
+                        ADR1.BorderColor = BaseColor.GRAY;
+                        ADVTable.AddCell(ADR1);
+
+                        PdfPCell ADABS1 = new PdfPCell(new Phrase(stAdv[7].Split('/')[0] + '/' + stAdv[7].Split('/')[1], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                        ADABS1.HorizontalAlignment = Element.ALIGN_CENTER;
+                        ADABS1.BorderWidth = 0.5F;
+                        ADABS1.Colspan = 2;
+                        ADABS1.PaddingBottom = 3;
+                        ADABS1.BackgroundColor = new BaseColor(235, 235, 235);
+                        ADABS1.BorderColor = BaseColor.GRAY;
+                        ADVTable.AddCell(ADABS1);
+
+                        PdfPCell ADCOM1 = new PdfPCell(new Phrase(stAdv[8], new Font(Font.FontFamily.HELVETICA, 10F, Font.NORMAL, BaseColor.BLACK)));
+                        ADCOM1.HorizontalAlignment = Element.ALIGN_LEFT;
+                        ADCOM1.BorderWidth = 0;
+                        ADCOM1.Colspan = 18;
+                        ADCOM1.PaddingBottom = 15;
+                        //COM1.BorderColor = BaseColor.LIGHT_GRAY;
+                        ADVTable.AddCell(ADCOM1);
+
+
+                        PdfPTable GradeTable = new PdfPTable(18);
+                        GradeTable.HorizontalAlignment = Element.ALIGN_CENTER;
+                        GradeTable.WidthPercentage = 100;
+
+                        PdfPCell Course = new PdfPCell(new Phrase("Course", new Font(Font.FontFamily.HELVETICA, 12.0F, Font.BOLD, BaseColor.WHITE)));
+                        Course.HorizontalAlignment = Element.ALIGN_LEFT;
+
+                        Course.BackgroundColor = new BaseColor(135, 0, 27);
+                        Course.BorderWidth = 1F;
+                        Course.Colspan = 7;
+                        Course.PaddingBottom = 5;
+                        GradeTable.AddCell(Course);
+                        PdfPCell Teacher = new PdfPCell(new Phrase("Teacher", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                        Teacher.HorizontalAlignment = Element.ALIGN_LEFT;
+                        Teacher.BackgroundColor = new BaseColor(135, 0, 27);
+                        Teacher.BorderWidth = 1F;
+                        Teacher.Colspan = 5;
+                        Teacher.PaddingBottom = 5;
+                        GradeTable.AddCell(Teacher);
+
+                        PdfPCell PED = new PdfPCell(new Phrase("P", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                        PED.HorizontalAlignment = Element.ALIGN_CENTER;
+                        PED.BackgroundColor = new BaseColor(135, 0, 27);
+                        PED.BorderWidth = 1F;
+                        PED.PaddingBottom = 5;
+                        GradeTable.AddCell(PED);
+
+                        PdfPCell Q1 = new PdfPCell(new Phrase("S", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                        Q1.HorizontalAlignment = Element.ALIGN_CENTER;
+                        Q1.BackgroundColor = new BaseColor(135, 0, 27);
+                        Q1.BorderWidth = 1F;
+                        Q1.PaddingBottom = 5;
+                        GradeTable.AddCell(Q1);
+                        PdfPCell Res = new PdfPCell(new Phrase("R", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                        Res.HorizontalAlignment = Element.ALIGN_CENTER;
+                        Res.BackgroundColor = new BaseColor(135, 0, 27);
+                        Res.BorderWidth = 1F;
+                        Res.PaddingBottom = 5;
+                        GradeTable.AddCell(Res);
+                        PdfPCell Cond = new PdfPCell(new Phrase("C", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                        Cond.HorizontalAlignment = Element.ALIGN_CENTER;
+                        Cond.BackgroundColor = new BaseColor(135, 0, 27);
+                        Cond.BorderWidth = 1F;
+                        Cond.PaddingBottom = 5;
+                        GradeTable.AddCell(Cond);
+                        PdfPCell ABS = new PdfPCell(new Phrase("A/T", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                        ABS.HorizontalAlignment = Element.ALIGN_CENTER;
+                        ABS.BackgroundColor = new BaseColor(135, 0, 27);
+                        ABS.BorderWidth = 1F;
+                        ABS.Colspan = 2;
+                        ABS.PaddingBottom = 8;
+                        GradeTable.AddCell(ABS);
+
+
+
+                        PdfPCell CO;
+                        PdfPCell TE;
+                        PdfPCell QU1;
+                        PdfPCell COM1;
+                        PdfPCell ABS1;
+                        PdfPCell R1;
+                        PdfPCell Co1;
+                        PdfPCell PERI;
+                        PdfPCell ABS2;
+                        PdfPCell PERI2;
+                        PdfPCell QU2;
+                        PdfPCell R2;
+                        PdfPCell Co2;
+
+                        for (int i = 0; i < stTable.Length - 1; i++)
+                        {
+                            var nfila = stTable[i].Split('|');
+
+                            CO = new PdfPCell(new Phrase(nfila[0], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                            CO.HorizontalAlignment = Element.ALIGN_LEFT;
+                            CO.BorderWidth = 0.5F;
+                            CO.Colspan = 7;
+                            CO.PaddingBottom = 3;
+                            CO.BackgroundColor = new BaseColor(235, 235, 235);
+                            CO.BorderColor = BaseColor.GRAY;
+                            GradeTable.AddCell(CO);
+
+                            TE = new PdfPCell(new Phrase(nfila[1], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                            TE.HorizontalAlignment = Element.ALIGN_LEFT;
+                            TE.BorderWidth = 0.5F;
+                            TE.Colspan = 5;
+                            TE.PaddingBottom = 3;
+                            TE.BackgroundColor = new BaseColor(235, 235, 235);
+                            TE.BorderColor = BaseColor.GRAY;
+                            GradeTable.AddCell(TE);
+
+                            PERI = new PdfPCell(new Phrase("Q1", new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                            PERI.HorizontalAlignment = Element.ALIGN_CENTER;
+                            PERI.BorderWidth = 0.5F;
+                            PERI.PaddingBottom = 3;
+                            PERI.BackgroundColor = new BaseColor(235, 235, 235);
+                            PERI.BorderColor = BaseColor.GRAY;
+                            GradeTable.AddCell(PERI);
+
+                            QU1 = new PdfPCell(new Phrase(nfila[2].Split('/')[0], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                            QU1.HorizontalAlignment = Element.ALIGN_CENTER;
+                            QU1.BorderWidth = 0.5F;
+                            QU1.PaddingBottom = 3;
+                            QU1.BackgroundColor = new BaseColor(235, 235, 235);
+                            QU1.BorderColor = BaseColor.GRAY;
+                            GradeTable.AddCell(QU1);
+
+                            R1 = new PdfPCell(new Phrase(nfila[2].Split('/')[1], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                            R1.HorizontalAlignment = Element.ALIGN_CENTER;
+                            R1.BorderWidth = 0.5F;
+                            R1.PaddingBottom = 3;
+                            R1.BackgroundColor = new BaseColor(235, 235, 235);
+                            R1.BorderColor = BaseColor.GRAY;
+                            GradeTable.AddCell(R1);
+
+                            Co1 = new PdfPCell(new Phrase(nfila[2].Split('/')[2], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                            Co1.HorizontalAlignment = Element.ALIGN_CENTER;
+                            Co1.BorderWidth = 0.5F;
+                            Co1.PaddingBottom = 3;
+                            Co1.BackgroundColor = new BaseColor(235, 235, 235);
+                            Co1.BorderColor = BaseColor.GRAY;
+                            GradeTable.AddCell(Co1);
+
+                            ABS1 = new PdfPCell(new Phrase(nfila[2].Split('/')[3] + '/' + nfila[2].Split('/')[4], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                            ABS1.HorizontalAlignment = Element.ALIGN_CENTER;
+                            ABS1.BorderWidth = 0.5F;
+                            ABS1.Colspan = 2;
+                            ABS1.PaddingBottom = 3;
+                            ABS1.BackgroundColor = new BaseColor(235, 235, 235);
+                            ABS1.BorderColor = BaseColor.GRAY;
+                            GradeTable.AddCell(ABS1);
+                            
+                            COM1 = new PdfPCell(new Phrase(nfila[3].Split('/')[5], new Font(Font.FontFamily.HELVETICA, 10F, Font.NORMAL, BaseColor.BLACK)));
+                            COM1.HorizontalAlignment = Element.ALIGN_LEFT;
+                            COM1.BorderWidth = 0;
+                            COM1.Colspan = 12;
+                            COM1.PaddingBottom = 10;
+                            //COM1.BorderColor = BaseColor.LIGHT_GRAY;
+                            GradeTable.AddCell(COM1);
+
+                             PERI2 = new PdfPCell(new Phrase("Q2", new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                            PERI2.HorizontalAlignment = Element.ALIGN_CENTER;
+                            PERI2.BorderWidth = 0.5F;
+                            PERI2.PaddingBottom = 3;
+                            PERI2.BackgroundColor = new BaseColor(235, 235, 235);
+                            PERI2.BorderColor = BaseColor.GRAY;
+                            GradeTable.AddCell(PERI2);
+
+                              QU2 = new PdfPCell(new Phrase(nfila[3].Split('/')[0], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                            QU2.HorizontalAlignment = Element.ALIGN_CENTER;
+                            QU2.BorderWidth = 0.5F;
+                            QU2.PaddingBottom = 3;
+                            QU2.BackgroundColor = new BaseColor(235, 235, 235);
+                            QU2.BorderColor = BaseColor.GRAY;
+                            GradeTable.AddCell(QU2);
+
+                             R2 = new PdfPCell(new Phrase(nfila[3].Split('/')[1], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                            R2.HorizontalAlignment = Element.ALIGN_CENTER;
+                            R2.BorderWidth = 0.5F;
+                            R2.PaddingBottom = 3;
+                            R2.BackgroundColor = new BaseColor(235, 235, 235);
+                            R2.BorderColor = BaseColor.GRAY;
+                            GradeTable.AddCell(R2);
+
+                             Co2 = new PdfPCell(new Phrase(nfila[3].Split('/')[2], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                            Co2.HorizontalAlignment = Element.ALIGN_CENTER;
+                            Co2.BorderWidth = 0.5F;
+                            Co2.PaddingBottom = 3;
+                            Co2.BackgroundColor = new BaseColor(235, 235, 235);
+                            Co2.BorderColor = BaseColor.GRAY;
+                            GradeTable.AddCell(Co2);
+
+                             ABS2 = new PdfPCell(new Phrase(nfila[3].Split('/')[3] + '/' + nfila[3].Split('/')[4], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                            ABS2.HorizontalAlignment = Element.ALIGN_CENTER;
+                            ABS2.BorderWidth = 0.5F;
+                            ABS2.Colspan = 2;
+                            ABS2.PaddingBottom = 3;
+                            ABS2.BackgroundColor = new BaseColor(235, 235, 235);
+                            ABS2.BorderColor = BaseColor.GRAY;
+                            GradeTable.AddCell(ABS2);
+
+                        }
+
+
+                        PdfPTable ExpTable = new PdfPTable(18);
+                        ExpTable.HorizontalAlignment = Element.ALIGN_CENTER;
+                        ExpTable.WidthPercentage = 100;
+
+                        Paragraph spacio = new Paragraph(" ");
+
+                        PdfPCell expCourse = new PdfPCell(new Phrase("Exploratory", new Font(Font.FontFamily.HELVETICA, 12.0F, Font.BOLD, BaseColor.WHITE)));
+                        expCourse.HorizontalAlignment = Element.ALIGN_LEFT;
+                        expCourse.BackgroundColor = new BaseColor(135, 0, 27);
+                        expCourse.BorderWidth = 1F;
+                        expCourse.Colspan = 7;
+                        expCourse.PaddingBottom = 5;
+                        ExpTable.AddCell(expCourse);
+                        PdfPCell expTeacher = new PdfPCell(new Phrase("Teacher", new Font(Font.FontFamily.HELVETICA, 12.0F, Font.BOLD, BaseColor.WHITE)));
+                        expTeacher.HorizontalAlignment = Element.ALIGN_LEFT;
+                        expTeacher.BackgroundColor = new BaseColor(135, 0, 27);
+                        expTeacher.BorderWidth = 1F;
+                        expTeacher.Colspan = 5;
+                        expTeacher.PaddingBottom = 5;
+                        ExpTable.AddCell(expTeacher);
+                        PdfPCell expEng = new PdfPCell(new Phrase("U", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                        expEng.HorizontalAlignment = Element.ALIGN_CENTER;
+                        expEng.BackgroundColor = new BaseColor(135, 0, 27);
+                        expEng.BorderWidth = 1F;
+                        expEng.Colspan = 2;
+                        expEng.PaddingBottom = 5;
+                        ExpTable.AddCell(expEng);
+                        PdfPCell expRes = new PdfPCell(new Phrase("R", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                        expRes.HorizontalAlignment = Element.ALIGN_CENTER;
+                        expRes.BackgroundColor = new BaseColor(135, 0, 27);
+                        expRes.BorderWidth = 1F;
+                        expRes.PaddingBottom = 5;
+                        ExpTable.AddCell(expRes);
+                        PdfPCell expCond = new PdfPCell(new Phrase("C", new Font(Font.FontFamily.HELVETICA, 11.0F, Font.BOLD, BaseColor.WHITE)));
+                        expCond.HorizontalAlignment = Element.ALIGN_CENTER;
+                        expCond.BackgroundColor = new BaseColor(135, 0, 27);
+                        expCond.BorderWidth = 1F;
+                        expCond.PaddingBottom = 5;
+                        ExpTable.AddCell(expCond);
+                        PdfPCell expABS = new PdfPCell(new Phrase("A/T", new Font(Font.FontFamily.HELVETICA, 12.0F, Font.BOLD, BaseColor.WHITE)));
+                        expABS.HorizontalAlignment = Element.ALIGN_CENTER;
+                        expABS.BackgroundColor = new BaseColor(135, 0, 27);
+                        expABS.BorderWidth = 1F;
+                        expABS.Colspan = 2;
+                        expABS.PaddingBottom = 5;
+                        ExpTable.AddCell(expABS);
+
+                        PdfPCell expCO;
+                        PdfPCell expTE;
+                        PdfPCell expQU1;
+                        PdfPCell expCOM1;
+                        PdfPCell expABS1;
+                        PdfPCell expR1;
+                        PdfPCell expCo1;
+
+                        for (int i = 0; i < expTable.Length - 1; i++)
+                        {
+                            var nfila = expTable[i].Split('|');
+
+                            expCO = new PdfPCell(new Phrase(nfila[0], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                            expCO.HorizontalAlignment = Element.ALIGN_LEFT;
+                            expCO.BorderWidth = 0.5F;
+                            expCO.Colspan = 7;
+                            expCO.Padding = 5;
+                            expCO.BackgroundColor = new BaseColor(235, 235, 235);
+                            expCO.BorderColor = BaseColor.GRAY;
+                            ExpTable.AddCell(expCO);
+
+                            expTE = new PdfPCell(new Phrase(nfila[1], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                            expTE.HorizontalAlignment = Element.ALIGN_LEFT;
+                            expTE.BorderWidth = 0.5F;
+                            expTE.Colspan = 5;
+                            expTE.PaddingTop = 5;
+                            expTE.BackgroundColor = new BaseColor(235, 235, 235);
+                            expTE.BorderColor = BaseColor.GRAY;
+                            ExpTable.AddCell(expTE);
+
+                            expQU1 = new PdfPCell(new Phrase(nfila[2], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                            expQU1.HorizontalAlignment = Element.ALIGN_CENTER;
+                            expQU1.BorderWidth = 0.5F;
+                            expQU1.Colspan = 2;
+                            expQU1.PaddingTop = 5;
+                            expQU1.BackgroundColor = new BaseColor(235, 235, 235);
+                            expQU1.BorderColor = BaseColor.GRAY;
+                            ExpTable.AddCell(expQU1);
+
+                            expR1 = new PdfPCell(new Phrase(nfila[3], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                            expR1.HorizontalAlignment = Element.ALIGN_CENTER;
+                            expR1.BorderWidth = 0.5F;
+                            expR1.PaddingTop = 5;
+                            expR1.BackgroundColor = new BaseColor(235, 235, 235);
+                            expR1.BorderColor = BaseColor.GRAY;
+                            ExpTable.AddCell(expR1);
+
+                            expCo1 = new PdfPCell(new Phrase(nfila[4], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                            expCo1.HorizontalAlignment = Element.ALIGN_CENTER;
+                            expCo1.BorderWidth = 0.5F;
+                            expCo1.PaddingTop = 5;
+                            expCo1.BackgroundColor = new BaseColor(235, 235, 235);
+                            expCo1.BorderColor = BaseColor.GRAY;
+                            ExpTable.AddCell(expCo1);
+
+                            expABS1 = new PdfPCell(new Phrase(nfila[5] + '/' + nfila[6], new Font(Font.FontFamily.HELVETICA, 11F, Font.NORMAL, BaseColor.BLACK)));
+                            expABS1.HorizontalAlignment = Element.ALIGN_CENTER;
+                            expABS1.BorderWidth = 0.5F;
+                            expABS1.Colspan = 2;
+                            expABS1.PaddingTop = 5;
+                            expABS1.BackgroundColor = new BaseColor(235, 235, 235);
+                            expABS1.BorderColor = BaseColor.GRAY;
+                            ExpTable.AddCell(expABS1);
+
+                            expCOM1 = new PdfPCell(new Phrase(nfila[7], new Font(Font.FontFamily.HELVETICA, 10F, Font.NORMAL, BaseColor.BLACK)));
+                            expCOM1.HorizontalAlignment = Element.ALIGN_LEFT;
+                            expCOM1.BorderWidth = 0;
+                            expCOM1.Colspan = 18;
+                            expCOM1.PaddingBottom = 15;
+                            //expCOM1.BorderColor = BaseColor.LIGHT_GRAY;
+                            ExpTable.AddCell(expCOM1);
+
+
+                        }
+                        //documento.Add(stfoto);
+                        documento.Add(HeadT);
+                        documento.Add(ADVTable);
+                        documento.Add(GradeTable);
+                        documento.Add(spacio);
+                        documento.Add(ExpTable);
+                        
+
                         //Process prc = new System.Diagnostics.Process();
                         //prc.StartInfo.FileName = fileName;
                         //prc.Start();
@@ -2775,7 +4277,6 @@ namespace HS_REPC_Final
             }
             return fname;
         }
-
 
         [WebMethod]
         public static string EXP_REPORTQ1(string stnum)

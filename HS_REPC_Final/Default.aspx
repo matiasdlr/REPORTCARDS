@@ -53,7 +53,8 @@
                             <button type="button" class="btn btn-success">Reports</button>
                             <ul class="dropdown-menu">
                                 <li ><a class="links repo5" href="#" id="btnESRep">ES Report Card</a></li>
-                                <li ><a class="links repo6" href="#" id="btnMSexp">MS 6th Explor. Report</a></li>
+                                <li ><a class="links repo6" href="#" id="btnMSexp">MS 6th Progress Report</a></li>
+                                <li ><a class="links repo7" href="#" id="btn6RC">MS 6th Report Card</a></li>
                                 <li><a class="links repo78" id="btnMSQ1" href="#">MS 7/8 Q1 Progress Report</a></li>
                                 <li>
                                     <hr />
@@ -121,7 +122,7 @@
                 stgrade(-1);
                 hrSelect(-1);
                 $("#AllHR").show();
-                $(".repo6").hide();
+                $(".repo6,.repo7").hide();
                 $(".repo5").show();
                 $(".repo78").hide();
                 $(".repohsq1,.reposhy1").hide();
@@ -134,7 +135,7 @@
                 stgrade(0);
                 hrSelect(0);
                 $("#AllHR").show();
-                $(".repo6").hide();
+                $(".repo6,.repo7").hide();
                 $(".repo5").show();
                 $(".repo78").hide();
                 $(".repohsq1,.reposhy1").hide();
@@ -147,7 +148,7 @@
                 stgrade(1);
                 hrSelect(1);
                 $("#AllHR").show();
-                $(".repo6").hide();
+                $(".repo6,.repo7").hide();
                 $(".repo5").show();
                 $(".repo78").hide();
                 $(".repohsq1,.reposhy1").hide();
@@ -159,7 +160,7 @@
                 stgrade(2);
                 hrSelect(2);
                 $("#AllHR").show();
-                $(".repo6").hide();
+                $(".repo6,.repo7").hide();
                 $(".repo5").show();
                 $(".repo78").hide();
                 $(".repohsq1,.reposhy1").hide();
@@ -171,7 +172,7 @@
                 stgrade(3);
                 hrSelect(3);
                 $("#AllHR").show();
-                $(".repo6").hide();
+                $(".repo6,.repo7").hide();
                 $(".repo5").show();
                 $(".repo78").hide();
                 $(".repohsq1,.reposhy1").hide();
@@ -183,7 +184,7 @@
                 stgrade(4);
                 hrSelect(4);
                 $("#AllHR").show();
-                $(".repo6").hide();
+                $(".repo6,.repo7").hide();
                 $(".repo5").show();
                 $(".repo78").hide();
                 $(".repohsq1,.reposhy1").hide();
@@ -196,7 +197,7 @@
                 stgrade(5);
                 hrSelect(5);
                 $("#AllHR").show();
-                $(".repo6").hide();
+                $(".repo6,.repo7").hide();
                 $(".repo5").show();
                 $(".repo78").hide();
                 
@@ -207,17 +208,16 @@
                 e.preventDefault();
                 stgrade(6);
                 $("#AllHR").hide();
-                $(".repo6").show();
+                $(".repo6,.repo7").show();
                 $(".repo5").hide();
                 $(".repo78").hide();
-                
                 $(".repohsq1,.reposhy1").hide();
             })
             $("#st7").click(function (e) {
                 e.preventDefault();
                 stgrade(7);
                 $("#AllHR").hide();
-                $(".repo6").hide();
+                $(".repo6,.repo7").hide();
                 $(".repo5").hide();
                 $(".repo78").show();
                 $(".repohsq1,.reposhy1").hide();
@@ -230,7 +230,7 @@
                 $("#AllHR").hide();
                 $(".repo78").show();
                 $(".repohsq1,.reposhy1").hide();
-                $(".repo6").hide();
+                $(".repo6,.repo7").hide();
                 $(".repo5").hide();
             })
             $("#st9").click(function (e) {
@@ -238,7 +238,7 @@
                 stgrade(9);
                 $("#AllHR").hide();
                 $(".repohsq1,.reposhy1").show();
-                $(".repo6").hide();
+                $(".repo6,.repo7").hide();
                 $(".repo5").hide();
 
             })
@@ -247,7 +247,7 @@
                 stgrade(10);
                 $("#AllHR").hide();
                 $(".repohsq1,.reposhy1").show();
-                $(".repo6").hide();
+                $(".repo6,.repo7").hide();
                 $(".repo5").hide();
             })
             $("#st11").click(function (e) {
@@ -255,7 +255,7 @@
                 stgrade(11);
                 $("#AllHR").hide();
                 $(".repohsq1,.reposhy1").show();
-                $(".repo6").hide();
+                $(".repo6,.repo7").hide();
                 $(".repo5").hide();
             })
             $("#st12").click(function (e) {
@@ -263,7 +263,7 @@
                 stgrade(12);
                 $("#AllHR").hide();
                 $(".repohsq1,.reposhy1").show();
-                $(".repo6").hide();
+                $(".repo6,.repo7").hide();
                 $(".repo5").hide();
             })
 
@@ -308,6 +308,12 @@
                     EXP_REPORTQ1($("#stnum").val());
                 }
             });
+            $("#btn6RC").click(function () {
+                if ($("#stnum").val() != '') {
+                    MSXIXREPORCARD($("#stnum").val());
+                }
+            });
+            
             $("#stbody").on('click', '.chk', function () {
                 if ($(this).prop("checked")) { 
                 $("#stnum").val(selectSch().substring(selectSch(),selectSch().length-1));
@@ -476,13 +482,39 @@
             });
         }
 
-        function ES5REPORTCARD(stid,gr,hr) {
+        function ES5REPORTCARD(stid,gr) {
             var param = "'stnum':'" + stid + "','grade':'" + gr + "'";
 
             $.ajax({
                 type: "POST",
                 async: false,
                 url: "Default.aspx/ES5REPORTCARD",
+                data: "{" + param + "}",
+               contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (response) {
+                    var m = response.d;
+                    if (m != '') {
+                        window.open("RepoFiles/" + m);
+                    } else {
+                        alert("Student with not Historical Grades!");
+                    }
+                    return false;
+                },
+                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    alert("Respuesta = " + XMLHttpRequest.responseText + "\n Estatus = " + textStatus + "\n Error = " + errorThrown);
+                }
+            });
+        }
+
+        
+        function MSXIXREPORCARD(stid) {
+            var param = "'stnum':'" + stid + "'";
+
+            $.ajax({
+                type: "POST",
+                async: false,
+                url: "Default.aspx/MSXIXREPORCARD",
                 data: "{" + param + "}",
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
@@ -500,7 +532,6 @@
                 }
             });
         }
-
 
         function EXP_REPORTQ1(stid) {
             var param = "'stnum':'" + stid + "'";
